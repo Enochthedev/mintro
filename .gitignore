@@ -1,10 +1,7 @@
 # Top-level project .gitignore
 
-# (Optional) If you intentionally want to ignore the entire `testFrontend` folder,
-# keep the following line uncommented. By default it's commented so sub-project
-# .gitignore files (for example `testFrontend/mintro-dashboard/.gitignore`) can
-# control their own ignores.
-# ./testFrontend
+# Ignore the nested test frontend (it's a separate repo/worktree)
+testFrontend/
 
 # Node / JavaScript
 node_modules/
