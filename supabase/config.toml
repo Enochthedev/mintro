@@ -1007,3 +1007,14 @@ entrypoint = "./functions/get-vendor-price-changes/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/get-vendor-price-changes/*.html" ]
+
+[functions.Auto-categorize-helper]
+enabled = true
+verify_jwt = true
+import_map = "./functions/Auto-categorize-helper/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/Auto-categorize-helper/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/Auto-categorize-helper/*.html" ]
