@@ -128,7 +128,7 @@ serve(async (req) => {
     // ============================================
     console.log("Starting immediate transaction sync...");
     let transactionsAdded = 0;
-    let insertedTransactions: any[] = [];
+    let insertedTransactionIds: string[] = [];
 
     try {
       const syncResponse = await fetch(`${PLAID_BASE_URL}/transactions/sync`, {
@@ -175,7 +175,7 @@ serve(async (req) => {
             .select();
 
           if (!txError && txData) {
-            insertedTransactions = txData;
+            insertedTransactionIds = txData.map(t => t.id);
             transactionsAdded = txData.length;
             console.log(`✅ Successfully added ${transactionsAdded} transactions`);
           } else {
@@ -211,65 +211,38 @@ serve(async (req) => {
     }
 
     // ============================================
-    // STEP 2: AUTO-CATEGORIZE & MATCH TO BLUEPRINTS
+    // STEP 2: AUTO-CATEGORIZE TRANSACTIONS
     // ============================================
     let categorizedCount = 0;
-    let blueprintMatchesCount = 0;
 
-    if (insertedTransactions.length > 0) {
-      console.log("Starting auto-categorization and blueprint matching...");
-
+    if (insertedTransactionIds.length > 0) {
+      console.log(`Auto-categorizing ${insertedTransactionIds.length} transactions...`);
+      
       try {
-        // Get active blueprints
-        const { data: blueprints } = await supabaseClient
-          .from("cost_blueprints")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("is_active", true);
-
-        for (const transaction of insertedTransactions) {
-          // Auto-categorize using OpenAI
-          try {
-            const category = await categorizeTransaction(transaction);
-            
-            if (category) {
-              await supabaseClient
-                .from("transaction_categorizations")
-                .insert({
-                  transaction_id: transaction.id,
-                  category: category.category,
-                  confidence: category.confidence,
-                  categorized_by: "ai",
-                });
-              categorizedCount++;
-            }
-          } catch (catError) {
-            console.error("Categorization error:", catError);
+        const categorizationResponse = await fetch(
+          `${Deno.env.get("SUPABASE_URL")}/functions/v1/auto-categorize-transactions`,
+          {
+            method: "POST",
+            headers: {
+              "Authorization": req.headers.get("Authorization")!,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              transaction_ids: insertedTransactionIds,
+            }),
           }
+        );
 
-          // Match to blueprints
-          if (blueprints && blueprints.length > 0) {
-            const match = findBestBlueprintMatch(transaction, blueprints);
-            
-            if (match && match.confidence > 0.8) {
-              await supabaseClient
-                .from("blueprint_expense_allocations")
-                .insert({
-                  transaction_id: transaction.id,
-                  blueprint_id: match.blueprint_id,
-                  expense_type: match.expense_type,
-                  allocation_amount: Math.abs(transaction.amount),
-                  notes: `Auto-linked: ${match.reason}`,
-                });
-              blueprintMatchesCount++;
-            }
-          }
+        if (categorizationResponse.ok) {
+          const categorizationResult = await categorizationResponse.json();
+          categorizedCount = categorizationResult.categorized || 0;
+          console.log(`✅ Auto-categorization complete: ${categorizedCount} transactions categorized`);
+        } else {
+          console.error("Auto-categorization failed:", await categorizationResponse.text());
         }
-
-        console.log(`✅ Categorized ${categorizedCount} transactions`);
-        console.log(`✅ Matched ${blueprintMatchesCount} transactions to blueprints`);
-      } catch (aiError) {
-        console.error("AI processing error:", aiError);
+      } catch (catError) {
+        console.error("Auto-categorization error (non-fatal):", catError);
+        // Don't throw - categorization failure shouldn't break bank connection
       }
     }
 
@@ -277,13 +250,12 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         message: transactionsAdded > 0 
-          ? `Bank connected! Synced ${transactionsAdded} transactions.`
+          ? `Bank connected! Synced ${transactionsAdded} transactions${categorizedCount > 0 ? `, categorized ${categorizedCount}` : ''}.`
           : "Bank connected successfully.",
         institution_name: institutionName,
         accounts_added: accounts.length,
         transactions_added: transactionsAdded,
         categorized: categorizedCount,
-        blueprint_matches: blueprintMatchesCount,
         plaid_item_id: plaidItem.id,
       }),
       {
@@ -299,112 +271,3 @@ serve(async (req) => {
     );
   }
 });
-
-// ============================================
-// HELPER: Auto-categorize using OpenAI
-// ============================================
-async function categorizeTransaction(transaction: any): Promise<{
-  category: string;
-  confidence: number;
-} | null> {
-  try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${Deno.env.get("OPENAI_API_KEY")}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: "You are a financial transaction categorizer. Categorize transactions into: materials, labor, overhead, income, or other. Respond with JSON only: {\"category\": \"...\", \"confidence\": 0.0-1.0}"
-          },
-          {
-            role: "user",
-            content: `Categorize this transaction:\nMerchant: ${transaction.merchant_name || transaction.name}\nAmount: $${transaction.amount}\nDescription: ${transaction.name}`
-          }
-        ],
-        temperature: 0.3,
-      }),
-    });
-
-    const data = await response.json();
-    const result = JSON.parse(data.choices[0].message.content);
-    return result;
-  } catch (error) {
-    console.error("OpenAI categorization error:", error);
-    return null;
-  }
-}
-
-// ============================================
-// HELPER: Match transaction to blueprint
-// ============================================
-function findBestBlueprintMatch(transaction: any, blueprints: any[]): {
-  blueprint_id: string;
-  confidence: number;
-  expense_type: string;
-  reason: string;
-} | null {
-  let bestMatch: any = null;
-  let highestConfidence = 0;
-
-  for (const blueprint of blueprints) {
-    let confidence = 0;
-    let expenseType = "materials";
-    const reasons: string[] = [];
-
-    const merchantLower = (transaction.merchant_name || transaction.name).toLowerCase();
-
-    // Materials keywords
-    if (merchantLower.includes("home depot") || merchantLower.includes("lowes") || 
-        merchantLower.includes("supply") || merchantLower.includes("lumber") ||
-        merchantLower.includes("hardware")) {
-      confidence += 0.4;
-      expenseType = "materials";
-      reasons.push("materials merchant");
-    }
-
-    // Labor keywords
-    if (merchantLower.includes("contractor") || merchantLower.includes("labor") ||
-        merchantLower.includes("payroll") || merchantLower.includes("wage")) {
-      confidence += 0.5;
-      expenseType = "labor";
-      reasons.push("labor keyword");
-    }
-
-    // Subscription matching
-    if (blueprint.blueprint_type === "subscription" && 
-        Math.abs(Math.abs(transaction.amount) - (blueprint.estimated_materials_cost || 0)) < 5) {
-      confidence += 0.7;
-      expenseType = "overhead";
-      reasons.push("matches subscription amount");
-    }
-
-    // Amount-based matching
-    const totalEstimated = (blueprint.estimated_materials_cost || 0) + 
-                          (blueprint.estimated_labor_cost || 0) + 
-                          (blueprint.estimated_overhead_cost || 0);
-    
-    if (totalEstimated > 0 && 
-        Math.abs(transaction.amount) >= totalEstimated * 0.7 &&
-        Math.abs(transaction.amount) <= totalEstimated * 1.3) {
-      confidence += 0.3;
-      reasons.push("amount within blueprint range");
-    }
-
-    if (confidence > highestConfidence) {
-      highestConfidence = confidence;
-      bestMatch = {
-        blueprint_id: blueprint.id,
-        confidence,
-        expense_type: expenseType,
-        reason: reasons.join(", "),
-      };
-    }
-  }
-
-  return highestConfidence > 0.5 ? bestMatch : null;
-}

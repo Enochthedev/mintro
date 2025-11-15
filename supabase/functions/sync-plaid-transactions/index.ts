@@ -4,14 +4,15 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const PLAID_CLIENT_ID = Deno.env.get("PLAID_CLIENT_ID");
 const PLAID_SECRET = Deno.env.get("PLAID_SECRET");
 const PLAID_ENV = Deno.env.get("PLAID_ENV") || "sandbox";
-const PLAID_BASE_URL = 
-  PLAID_ENV === "production" ? "https://production.plaid.com" :
-  PLAID_ENV === "development" ? "https://development.plaid.com" :
-  "https://sandbox.plaid.com";
+const PLAID_BASE_URL = PLAID_ENV === "production" 
+  ? "https://production.plaid.com" 
+  : PLAID_ENV === "development" 
+    ? "https://development.plaid.com" 
+    : "https://sandbox.plaid.com";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type"
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
@@ -26,10 +27,7 @@ serve(async (req) => {
     if (cronSecret !== Deno.env.get("CRON_SECRET")) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        }
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -54,28 +52,28 @@ serve(async (req) => {
         JSON.stringify({
           success: true,
           message: "No items need syncing",
-          synced_items: 0
+          synced_items: 0,
         }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     console.log(`Syncing ${plaidItems.length} items`);
+    
     const syncResults = [];
 
     for (const item of plaidItems) {
-      const logEntry = {
+      const logEntry: any = {
         plaid_item_id: item.id,
         user_id: item.user_id,
         status: "success",
         transactions_added: 0,
         transactions_modified: 0,
         transactions_removed: 0,
-        started_at: new Date().toISOString()
+        started_at: new Date().toISOString(),
       };
+
+      const transactionIdsToCategorizze: string[] = [];
 
       try {
         const syncResponse = await fetch(`${PLAID_BASE_URL}/transactions/sync`, {
@@ -83,12 +81,12 @@ serve(async (req) => {
           headers: {
             "Content-Type": "application/json",
             "PLAID-CLIENT-ID": PLAID_CLIENT_ID!,
-            "PLAID-SECRET": PLAID_SECRET!
+            "PLAID-SECRET": PLAID_SECRET!,
           },
           body: JSON.stringify({
             access_token: item.access_token,
-            cursor: item.cursor || undefined
-          })
+            cursor: item.cursor || undefined,
+          }),
         });
 
         const syncData = await syncResponse.json();
@@ -106,7 +104,7 @@ serve(async (req) => {
                 status: "requires_update",
                 error_code: syncData.error_code,
                 error_message: syncData.error_message,
-                needs_sync: false
+                needs_sync: false,
               })
               .eq("id", item.id);
           }
@@ -114,7 +112,7 @@ serve(async (req) => {
           syncResults.push({
             item_id: item.id,
             institution: item.institution_name,
-            error: syncData.error_message
+            error: syncData.error_message,
           });
           continue;
         }
@@ -128,13 +126,13 @@ serve(async (req) => {
           .eq("plaid_item_id", item.id);
 
         const accountMap = new Map(
-          bankAccounts?.map(acc => [acc.account_id, acc.id]) || []
+          bankAccounts?.map((acc) => [acc.account_id, acc.id]) || []
         );
 
         // Process added transactions
         if (added && added.length > 0) {
           const transactionsToInsert = added
-            .map(txn => ({
+            .map((txn: any) => ({
               transaction_id: txn.transaction_id,
               bank_account_id: accountMap.get(txn.account_id),
               user_id: item.user_id,
@@ -144,20 +142,22 @@ serve(async (req) => {
               merchant_name: txn.merchant_name,
               plaid_category: txn.category,
               pending: txn.pending,
-              payment_channel: txn.payment_channel
+              payment_channel: txn.payment_channel,
             }))
-            .filter(txn => txn.bank_account_id);
+            .filter((txn: any) => txn.bank_account_id);
 
           if (transactionsToInsert.length > 0) {
-            const { error: insertError } = await supabaseClient
+            const { data: insertedData, error: insertError } = await supabaseClient
               .from("transactions")
               .upsert(transactionsToInsert, {
                 onConflict: "transaction_id",
-                ignoreDuplicates: false
-              });
+                ignoreDuplicates: false,
+              })
+              .select("id");
 
-            if (!insertError) {
+            if (!insertError && insertedData) {
               logEntry.transactions_added = transactionsToInsert.length;
+              transactionIdsToCategorizze.push(...insertedData.map(t => t.id));
             }
           }
         }
@@ -173,11 +173,22 @@ serve(async (req) => {
                 name: txn.name,
                 merchant_name: txn.merchant_name,
                 pending: txn.pending,
-                plaid_category: txn.category
+                plaid_category: txn.category,
               })
               .eq("transaction_id", txn.transaction_id);
 
             logEntry.transactions_modified++;
+          }
+
+          // Get IDs of modified transactions for categorization
+          const { data: modifiedTxns } = await supabaseClient
+            .from("transactions")
+            .select("id")
+            .eq("user_id", item.user_id)
+            .in("transaction_id", modified.map((t: any) => t.transaction_id));
+
+          if (modifiedTxns) {
+            transactionIdsToCategorizze.push(...modifiedTxns.map(t => t.id));
           }
         }
 
@@ -186,9 +197,43 @@ serve(async (req) => {
           await supabaseClient
             .from("transactions")
             .delete()
-            .in("transaction_id", removed.map(txn => txn.transaction_id));
+            .in("transaction_id", removed.map((txn: any) => txn.transaction_id));
 
           logEntry.transactions_removed = removed.length;
+        }
+
+        // ============================================
+        // AUTO-CATEGORIZE NEW/MODIFIED TRANSACTIONS
+        // ============================================
+        if (transactionIdsToCategorizze.length > 0) {
+          console.log(`Auto-categorizing ${transactionIdsToCategorizze.length} transactions for item ${item.id}...`);
+          
+          try {
+            const categorizationResponse = await fetch(
+              `${Deno.env.get("SUPABASE_URL")}/functions/v1/auto-categorize-transactions`,
+              {
+                method: "POST",
+                headers: {
+                  "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                  "Content-Type": "application/json",
+                  "apikey": Deno.env.get("SUPABASE_ANON_KEY")!,
+                },
+                body: JSON.stringify({
+                  transaction_ids: transactionIdsToCategorizze,
+                }),
+              }
+            );
+
+            if (categorizationResponse.ok) {
+              const categorizationResult = await categorizationResponse.json();
+              console.log(`✅ Categorized ${categorizationResult.categorized || 0} transactions for item ${item.id}`);
+            } else {
+              console.error("Auto-categorization failed:", await categorizationResponse.text());
+            }
+          } catch (catError) {
+            console.error("Auto-categorization error (non-fatal):", catError);
+            // Don't throw - categorization failure shouldn't break sync
+          }
         }
 
         // Update item: mark as synced, update cursor
@@ -200,7 +245,7 @@ serve(async (req) => {
             needs_sync: false,
             status: "active",
             error_code: null,
-            error_message: null
+            error_message: null,
           })
           .eq("id", item.id);
 
@@ -209,10 +254,9 @@ serve(async (req) => {
           institution: item.institution_name,
           added: logEntry.transactions_added,
           modified: logEntry.transactions_modified,
-          removed: logEntry.transactions_removed
+          removed: logEntry.transactions_removed,
         });
-
-      } catch (error) {
+      } catch (error: any) {
         console.error("Sync error for item:", item.id, error);
         logEntry.status = "error";
         logEntry.error_message = error.message;
@@ -220,7 +264,7 @@ serve(async (req) => {
         syncResults.push({
           item_id: item.id,
           institution: item.institution_name,
-          error: error.message
+          error: error.message,
         });
       } finally {
         logEntry.completed_at = new Date().toISOString();
@@ -232,22 +276,18 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         synced_items: syncResults.length,
-        results: syncResults
+        results: syncResults,
       }),
       {
         status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
-
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

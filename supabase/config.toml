@@ -842,3 +842,102 @@ entrypoint = "./functions/delete-cost-blueprint/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/delete-cost-blueprint/*.html" ]
+
+[functions.auto-categorize-transactions]
+enabled = true
+verify_jwt = true
+import_map = "./functions/auto-categorize-transactions/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/auto-categorize-transactions/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/auto-categorize-transactions/*.html" ]
+
+[functions.create-invoice]
+enabled = true
+verify_jwt = true
+import_map = "./functions/create-invoice/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/create-invoice/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/create-invoice/*.html" ]
+
+[functions.list-invoices]
+enabled = true
+verify_jwt = true
+import_map = "./functions/list-invoices/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/list-invoices/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/list-invoices/*.html" ]
+
+[functions.get-invoice-details]
+enabled = true
+verify_jwt = true
+import_map = "./functions/get-invoice-details/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/get-invoice-details/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/get-invoice-details/*.html" ]
+
+[functions.update-invoice]
+enabled = true
+verify_jwt = true
+import_map = "./functions/update-invoice/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/update-invoice/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/update-invoice/*.html" ]
+
+[functions.delete-invoice]
+enabled = true
+verify_jwt = true
+import_map = "./functions/delete-invoice/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/delete-invoice/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/delete-invoice/*.html" ]
+
+[functions.update-invoice-actuals]
+enabled = true
+verify_jwt = true
+import_map = "./functions/update-invoice-actuals/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/update-invoice-actuals/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/update-invoice-actuals/*.html" ]
+
+[functions.get-invoice-profit-breakdown]
+enabled = true
+verify_jwt = true
+import_map = "./functions/get-invoice-profit-breakdown/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/get-invoice-profit-breakdown/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/get-invoice-profit-breakdown/*.html" ]
+
+[functions.suggest-invoice-costs]
+enabled = true
+verify_jwt = true
+import_map = "./functions/suggest-invoice-costs/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/suggest-invoice-costs/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/suggest-invoice-costs/*.html" ]
