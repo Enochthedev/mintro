@@ -114,7 +114,9 @@ serve(async (req) => {
       throw invoiceError;
     }
 
-    // Create invoice items if provided
+    // ============================================
+    // STEP 3: CREATE INVOICE ITEMS
+    // ============================================
     if (items && Array.isArray(items) && items.length > 0) {
       const itemsToInsert = items.map(item => ({
         invoice_id: invoice.id,
@@ -134,7 +136,7 @@ serve(async (req) => {
     }
 
     // ============================================
-    // STEP 3: CREATE BLUEPRINT USAGE RECORDS
+    // STEP 4: CREATE BLUEPRINT USAGE RECORDS
     // ============================================
     let blueprintUsages: any[] = [];
 
@@ -175,7 +177,9 @@ serve(async (req) => {
       }
     }
 
-    // Fetch complete invoice with items and blueprint usage
+    // ============================================
+    // STEP 5: FETCH COMPLETE INVOICE DATA
+    // ============================================
     const { data: completeInvoice } = await supabaseClient
       .from("invoices")
       .select(`
