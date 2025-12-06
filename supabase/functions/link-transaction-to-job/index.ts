@@ -80,8 +80,43 @@ serve(async (req) => {
     }
 
     // Calculate allocation amount if not provided
-    const finalAllocationAmount = allocation_amount || 
+    const finalAllocationAmount = allocation_amount ||
       (Math.abs(parseFloat(transaction.amount)) * allocation_percentage / 100);
+
+    // VALIDATION: Check if transaction would be over-allocated
+    const { data: existingAllocationsForTx } = await supabaseClient
+      .from("transaction_job_allocations")
+      .select("allocation_amount, job_id, invoices(invoice)")
+      .eq("transaction_id", transaction_id);
+
+    const transactionAmount = Math.abs(parseFloat(transaction.amount));
+    const totalAllocated = existingAllocationsForTx
+      ?.filter(alloc => alloc.job_id !== job_id) // Exclude current job if updating
+      .reduce((sum, alloc) => sum + Math.abs(Number(alloc.allocation_amount) || 0), 0) || 0;
+
+    const totalAfterNew = totalAllocated + Math.abs(finalAllocationAmount);
+
+    if (totalAfterNew > transactionAmount + 0.01) { // 0.01 for floating point tolerance
+      return new Response(
+        JSON.stringify({
+          error: "Transaction over-allocated",
+          message: `This transaction ($${transactionAmount.toFixed(2)}) is already ${((totalAllocated / transactionAmount) * 100).toFixed(1)}% allocated ($${totalAllocated.toFixed(2)}). Adding $${Math.abs(finalAllocationAmount).toFixed(2)} would exceed 100%.`,
+          current_allocations: {
+            amount: totalAllocated,
+            percentage: parseFloat(((totalAllocated / transactionAmount) * 100).toFixed(2)),
+            remaining: parseFloat((transactionAmount - totalAllocated).toFixed(2))
+          },
+          existing_jobs: existingAllocationsForTx
+            ?.filter(alloc => alloc.job_id !== job_id)
+            .map(a => ({
+              job_id: a.job_id,
+              invoice_number: a.invoices?.invoice,
+              amount: a.allocation_amount
+            })) || []
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Check if link already exists
     const { data: existingLink, error: checkError } = await supabaseClient
@@ -110,11 +145,36 @@ serve(async (req) => {
 
       if (updateError) throw updateError;
 
+      // Recalculate invoice totals
+      const { data: allAllocations } = await supabaseClient
+        .from("transaction_job_allocations")
+        .select("allocation_amount")
+        .eq("job_id", job_id);
+
+      const totalActualCost = allAllocations?.reduce(
+        (sum, alloc) => sum + Math.abs(Number(alloc.allocation_amount) || 0),
+        0
+      ) || 0;
+
+      const actualProfit = (Number(invoice.amount) || 0) - totalActualCost;
+
+      await supabaseClient
+        .from("invoices")
+        .update({
+          total_actual_cost: totalActualCost,
+          actual_profit: actualProfit,
+        })
+        .eq("id", job_id);
+
       return new Response(
         JSON.stringify({
           success: true,
           message: "Transaction link updated",
           link: updated,
+          invoice_totals_updated: {
+            total_actual_cost: totalActualCost,
+            actual_profit: actualProfit,
+          },
         }),
         {
           status: 200,
@@ -145,6 +205,27 @@ serve(async (req) => {
       throw linkError;
     }
 
+    // Recalculate invoice totals
+    const { data: allAllocations } = await supabaseClient
+      .from("transaction_job_allocations")
+      .select("allocation_amount")
+      .eq("job_id", job_id);
+
+    const totalActualCost = allAllocations?.reduce(
+      (sum, alloc) => sum + Math.abs(Number(alloc.allocation_amount) || 0),
+      0
+    ) || 0;
+
+    const actualProfit = (Number(invoice.amount) || 0) - totalActualCost;
+
+    await supabaseClient
+      .from("invoices")
+      .update({
+        total_actual_cost: totalActualCost,
+        actual_profit: actualProfit,
+      })
+      .eq("id", job_id);
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -161,6 +242,10 @@ serve(async (req) => {
           invoice_number: invoice.invoice,
           client_name: invoice.client,
           total_amount: invoice.amount,
+        },
+        invoice_totals_updated: {
+          total_actual_cost: totalActualCost,
+          actual_profit: actualProfit,
         },
       }),
       {

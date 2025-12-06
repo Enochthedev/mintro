@@ -76,6 +76,26 @@ serve(async (req) => {
       );
     }
 
+    // Check for duplicate rule (same rule_type + match_value for this user)
+    const { data: existingRule } = await supabaseClient
+      .from("categorization_rules")
+      .select("id, category_id")
+      .eq("user_id", user.id)
+      .eq("rule_type", rule_type)
+      .ilike("match_value", match_value.trim())
+      .single();
+
+    if (existingRule) {
+      return new Response(
+        JSON.stringify({ 
+          error: "A rule with this type and match value already exists",
+          existing_rule_id: existingRule.id,
+          existing_category_id: existingRule.category_id
+        }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Create rule
     const { data: rule, error: insertError } = await supabaseClient
       .from("categorization_rules")

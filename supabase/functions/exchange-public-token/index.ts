@@ -124,6 +124,44 @@ serve(async (req) => {
     }
 
     // ============================================
+    // STEP 0: ENSURE USER HAS EXPENSE CATEGORIES
+    // ============================================
+    console.log("Checking expense categories...");
+    
+    const { count: categoryCount } = await supabaseClient
+      .from("expense_categories")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id);
+
+    if (!categoryCount || categoryCount === 0) {
+      console.log("No categories found - setting up defaults...");
+      try {
+        const setupResponse = await fetch(
+          `${Deno.env.get("SUPABASE_URL")}/functions/v1/setup-default-categories`,
+          {
+            method: "POST",
+            headers: {
+              "Authorization": req.headers.get("Authorization")!,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({}),
+          }
+        );
+        
+        if (setupResponse.ok) {
+          const setupResult = await setupResponse.json();
+          console.log(`✅ Created ${setupResult.categories_count} default categories`);
+        } else {
+          console.error("Failed to setup default categories:", await setupResponse.text());
+        }
+      } catch (setupError) {
+        console.error("Category setup error (non-fatal):", setupError);
+      }
+    } else {
+      console.log(`User already has ${categoryCount} categories`);
+    }
+
+    // ============================================
     // STEP 1: SYNC TRANSACTIONS IMMEDIATELY
     // ============================================
     console.log("Starting immediate transaction sync...");

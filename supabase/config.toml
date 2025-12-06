@@ -1018,3 +1018,15 @@ entrypoint = "./functions/Auto-categorize-helper/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/Auto-categorize-helper/*.html" ]
+
+[functions.test-categorization-rule]
+enabled = true
+verify_jwt = true
+import_map = "./functions/test-categorization-rule/deno.json"
+entrypoint = "./functions/test-categorization-rule/index.ts"
+
+[functions.analyze-suggest-categories]
+enabled = true
+verify_jwt = true
+import_map = "./functions/analyze-suggest-categories/deno.json"
+entrypoint = "./functions/analyze-suggest-categories/index.ts"

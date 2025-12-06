@@ -57,6 +57,7 @@ serve(async (req) => {
           actual_materials_cost,
           actual_labor_cost,
           actual_overhead_cost,
+          actual_sale_price,
           total_actual_cost,
           actual_profit,
           cost_variance,
@@ -159,6 +160,74 @@ serve(async (req) => {
       };
     }
 
+    // Calculate comprehensive cost breakdown
+    // Separate line items by category (revenue vs costs)
+    const revenueItems = invoice.invoice_items?.filter((item: any) =>
+      item.category && item.category.toLowerCase() === 'revenue'
+    ) || [];
+
+    const costItems = invoice.invoice_items?.filter((item: any) =>
+      !item.category || item.category.toLowerCase() !== 'revenue'
+    ) || [];
+
+    const lineItemRevenueTotal = revenueItems.reduce(
+      (sum: number, item: any) => sum + (item.qty * parseFloat(item.unit_price || 0)),
+      0
+    );
+
+    const lineItemCostsTotal = costItems.reduce(
+      (sum: number, item: any) => sum + (item.qty * parseFloat(item.unit_price || 0)),
+      0
+    );
+
+    const costBreakdown = {
+      blueprints: {
+        items: invoice.blueprint_usage?.map((usage: any) => ({
+          name: usage.cost_blueprints?.name || 'Unknown Blueprint',
+          blueprint_type: usage.cost_blueprints?.blueprint_type,
+          sale_price: parseFloat(usage.actual_sale_price || 0),
+          estimated_cost: parseFloat(usage.cost_blueprints?.total_estimated_cost || 0),
+          actual_cost: parseFloat(usage.total_actual_cost || 0),
+          profit: parseFloat(usage.actual_profit || 0),
+        })) || [],
+        total_sale_price: invoice.blueprint_usage?.reduce(
+          (sum: number, usage: any) => sum + parseFloat(usage.actual_sale_price || 0),
+          0
+        ) || 0,
+        total_cost: invoice.blueprint_usage?.reduce(
+          (sum: number, usage: any) => sum + parseFloat(usage.total_actual_cost || 0),
+          0
+        ) || 0,
+        total_profit: invoice.blueprint_usage?.reduce(
+          (sum: number, usage: any) => sum + parseFloat(usage.actual_profit || 0),
+          0
+        ) || 0,
+      },
+      line_items: {
+        revenue_items: revenueItems.map((item: any) => ({
+          description: item.description,
+          category: item.category,
+          qty: item.qty,
+          unit_price: parseFloat(item.unit_price || 0),
+          total: item.qty * parseFloat(item.unit_price || 0),
+        })),
+        expense_items: costItems.map((item: any) => ({
+          description: item.description,
+          category: item.category,
+          qty: item.qty,
+          unit_price: parseFloat(item.unit_price || 0),
+          total: item.qty * parseFloat(item.unit_price || 0),
+        })),
+        revenue_total: lineItemRevenueTotal,
+        expense_total: lineItemCostsTotal,
+        total_amount: lineItemRevenueTotal + lineItemCostsTotal, // All items add to invoice amount
+        total_cost_contribution: lineItemCostsTotal, // Only expenses add to actual cost
+      },
+      grand_total: parseFloat(invoice.amount || 0),
+      total_actual_cost: parseFloat(invoice.total_actual_cost || 0),
+      actual_profit: parseFloat(invoice.actual_profit || 0),
+    };
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -166,6 +235,7 @@ serve(async (req) => {
           ...invoice,
           profit_summary: profitSummary,
           blueprint_comparison: blueprintComparison,
+          cost_breakdown: costBreakdown,
         },
       }),
       {

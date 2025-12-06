@@ -53,11 +53,28 @@ serve(async (req) => {
         blueprint_usage (
           id,
           blueprint_id,
+          actual_sale_price,
           total_actual_cost,
           actual_profit,
           cost_blueprints (
             name,
             blueprint_type
+          )
+        ),
+        transaction_job_allocations (
+          id,
+          allocation_amount,
+          allocation_percentage,
+          notes,
+          created_at,
+          transactions (
+            id,
+            transaction_id,
+            date,
+            name,
+            merchant_name,
+            amount,
+            category
           )
         )
       `, { count: "exact" })

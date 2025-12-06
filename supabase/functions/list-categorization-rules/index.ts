@@ -34,7 +34,15 @@ serve(async (req) => {
       );
     }
 
-    const { data: rules, error: rulesError } = await supabaseClient
+    // Parse query params for pagination and filtering
+    const url = new URL(req.url);
+    const limit = parseInt(url.searchParams.get("limit") || "50");
+    const offset = parseInt(url.searchParams.get("offset") || "0");
+    const category_id = url.searchParams.get("category_id");
+    const rule_type = url.searchParams.get("rule_type");
+    const is_active = url.searchParams.get("is_active");
+
+    let query = supabaseClient
       .from("categorization_rules")
       .select(`
         *,
@@ -44,10 +52,27 @@ serve(async (req) => {
           color,
           icon
         )
-      `)
-      .eq("user_id", user.id)
+      `, { count: "exact" })
+      .eq("user_id", user.id);
+
+    // Apply filters
+    if (category_id) {
+      query = query.eq("category_id", category_id);
+    }
+    if (rule_type) {
+      query = query.eq("rule_type", rule_type);
+    }
+    if (is_active !== null && is_active !== undefined) {
+      query = query.eq("is_active", is_active === "true");
+    }
+
+    // Apply ordering and pagination
+    query = query
       .order("priority", { ascending: false })
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    const { data: rules, error: rulesError, count } = await query;
 
     if (rulesError) {
       throw rulesError;
@@ -57,7 +82,12 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         rules: rules || [],
-        total_rules: rules?.length || 0,
+        pagination: {
+          total: count || 0,
+          limit,
+          offset,
+          has_more: count ? offset + limit < count : false,
+        },
       }),
       {
         status: 200,
