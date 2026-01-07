@@ -35,22 +35,25 @@ serve(async (req) => {
       );
     }
 
-    const { transaction_ids } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const { transaction_ids, limit = 500 } = body;
 
-    if (!transaction_ids || !Array.isArray(transaction_ids) || transaction_ids.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "transaction_ids array is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Get uncategorized transactions
-    const { data: transactions, error: txError } = await supabaseClient
+    // Build query for uncategorized transactions
+    let query = supabaseClient
       .from("transactions")
       .select("id, transaction_id, name, merchant_name, amount, category")
       .eq("user_id", user.id)
-      .in("id", transaction_ids)
       .is("category", null);
+
+    // If specific IDs provided, use them. Otherwise, fetch all uncategorized.
+    if (transaction_ids && Array.isArray(transaction_ids) && transaction_ids.length > 0) {
+      query = query.in("id", transaction_ids);
+    } else {
+      // Fetch all uncategorized transactions up to limit
+      query = query.limit(limit);
+    }
+
+    const { data: transactions, error: txError } = await query;
 
     if (txError) throw txError;
 
@@ -64,7 +67,7 @@ serve(async (req) => {
     // Get user's categorization rules
     const { data: rules, error: rulesError } = await supabaseClient
       .from("categorization_rules")
-      .select(`id, category_id, rule_type, match_value, min_amount, max_amount, priority, confidence_score, expense_categories (id, name)`)
+      .select(`id, category_id, rule_type, match_value, min_amount, max_amount, priority, confidence_score, expense_categories!category_id (id, name)`)
       .eq("user_id", user.id)
       .eq("is_active", true)
       .order("priority", { ascending: false });
@@ -86,11 +89,11 @@ serve(async (req) => {
           switch (rule.rule_type) {
             case "vendor_exact":
               isMatch = transaction.merchant_name?.toLowerCase() === rule.match_value.toLowerCase() ||
-                        transaction.name?.toLowerCase() === rule.match_value.toLowerCase();
+                transaction.name?.toLowerCase() === rule.match_value.toLowerCase();
               break;
             case "vendor_contains":
               isMatch = transaction.merchant_name?.toLowerCase().includes(rule.match_value.toLowerCase()) ||
-                        transaction.name?.toLowerCase().includes(rule.match_value.toLowerCase());
+                transaction.name?.toLowerCase().includes(rule.match_value.toLowerCase());
               break;
             case "description_contains":
               isMatch = transaction.name?.toLowerCase().includes(rule.match_value.toLowerCase());
@@ -98,7 +101,7 @@ serve(async (req) => {
             case "amount_range":
               const amount = Math.abs(parseFloat(transaction.amount));
               isMatch = (!rule.min_amount || amount >= parseFloat(rule.min_amount)) &&
-                        (!rule.max_amount || amount <= parseFloat(rule.max_amount));
+                (!rule.max_amount || amount <= parseFloat(rule.max_amount));
               break;
           }
           if (isMatch) {

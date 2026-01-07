@@ -160,7 +160,7 @@ serve(async (req) => {
             .eq("user_id", user.id)
             .select(`
         *,
-        expense_categories (
+        expense_categories!category_id (
           id,
           name,
           color,

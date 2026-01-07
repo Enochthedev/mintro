@@ -46,7 +46,7 @@ serve(async (req) => {
       .from("categorization_rules")
       .select(`
         *,
-        expense_categories!inner (
+        expense_categories!category_id (
           id,
           name,
           color,

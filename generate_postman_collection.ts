@@ -60,6 +60,118 @@ const collection = {
     item: []
 };
 
+// AUTHENTICATION
+collection.item.push({
+    name: "🔐 Authentication",
+    description: "Supabase authentication endpoints. Use these to obtain ACCESS_TOKEN for other API requests.",
+    item: [
+        {
+            name: "Sign In with Password",
+            request: {
+                method: "POST",
+                header: [
+                    { key: "apikey", value: "{{ANON_KEY}}" },
+                    { key: "Content-Type", value: "application/json" }
+                ],
+                url: {
+                    raw: "{{PROJECT_URL}}/auth/v1/token?grant_type=password",
+                    host: ["{{PROJECT_URL}}"],
+                    path: ["auth", "v1", "token"],
+                    query: [{ key: "grant_type", value: "password", disabled: false }]
+                },
+                description: "Sign in with email and password to obtain an access token. Copy the access_token from the response and paste it into the ACCESS_TOKEN collection variable.",
+                body: {
+                    mode: "raw",
+                    raw: JSON.stringify({ email: "your-email@example.com", password: "your-password" }, null, 2),
+                    options: { raw: { language: "json" } }
+                }
+            },
+            response: [{
+                name: "Success Response",
+                status: "OK",
+                code: 200,
+                header: [{ key: "Content-Type", value: "application/json" }],
+                body: JSON.stringify({
+                    access_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                    token_type: "bearer",
+                    expires_in: 3600,
+                    refresh_token: "refresh_token_here",
+                    user: { id: "user-uuid", email: "your-email@example.com", created_at: "2025-11-25T10:00:00Z", role: "authenticated" }
+                }, null, 2)
+            }]
+        },
+        {
+            name: "Sign Up",
+            request: {
+                method: "POST",
+                header: [
+                    { key: "apikey", value: "{{ANON_KEY}}" },
+                    { key: "Content-Type", value: "application/json" }
+                ],
+                url: {
+                    raw: "{{PROJECT_URL}}/auth/v1/signup",
+                    host: ["{{PROJECT_URL}}"],
+                    path: ["auth", "v1", "signup"]
+                },
+                description: "Create a new user account. If email confirmation is disabled, you'll receive an access token immediately. Otherwise, check your email for a confirmation link first.",
+                body: {
+                    mode: "raw",
+                    raw: JSON.stringify({ email: "new-user@example.com", password: "your-secure-password" }, null, 2),
+                    options: { raw: { language: "json" } }
+                }
+            },
+            response: [{
+                name: "Success Response",
+                status: "OK",
+                code: 200,
+                header: [{ key: "Content-Type", value: "application/json" }],
+                body: JSON.stringify({
+                    access_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                    token_type: "bearer",
+                    expires_in: 3600,
+                    refresh_token: "refresh_token_here",
+                    user: { id: "new-user-uuid", email: "new-user@example.com", created_at: "2025-11-25T10:00:00Z", role: "authenticated", email_confirmed_at: "2025-11-25T10:00:00Z" }
+                }, null, 2)
+            }]
+        },
+        {
+            name: "Refresh Token",
+            request: {
+                method: "POST",
+                header: [
+                    { key: "apikey", value: "{{ANON_KEY}}" },
+                    { key: "Content-Type", value: "application/json" }
+                ],
+                url: {
+                    raw: "{{PROJECT_URL}}/auth/v1/token?grant_type=refresh_token",
+                    host: ["{{PROJECT_URL}}"],
+                    path: ["auth", "v1", "token"],
+                    query: [{ key: "grant_type", value: "refresh_token", disabled: false }]
+                },
+                description: "Use your refresh_token to obtain a new access_token when the current one expires.",
+                body: {
+                    mode: "raw",
+                    raw: JSON.stringify({ refresh_token: "your-refresh-token-here" }, null, 2),
+                    options: { raw: { language: "json" } }
+                }
+            },
+            response: [{
+                name: "Success Response",
+                status: "OK",
+                code: 200,
+                header: [{ key: "Content-Type", value: "application/json" }],
+                body: JSON.stringify({
+                    access_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                    token_type: "bearer",
+                    expires_in: 3600,
+                    refresh_token: "new_refresh_token_here",
+                    user: { id: "user-uuid", email: "your-email@example.com" }
+                }, null, 2)
+            }]
+        }
+    ]
+});
+
 // INVOICES
 collection.item.push({
     name: "Invoices",
@@ -134,6 +246,18 @@ collection.item.push({
                     [],
                     { success: true, message: "Invoice created successfully", invoice: { id: "new-uuid", invoice: "INV-005", client: "John Smith Construction", amount: 5000.00, tags: ["urgent", "residential"], invoice_items: [{ id: "item-1", description: "Labor - Kitchen Installation", qty: 40, unit_price: 75.00, total_price: 3000.00 }, { id: "item-2", description: "Materials - Cabinets", qty: 1, unit_price: 2000.00, total_price: 2000.00 }] } },
                     "Create detailed invoice with line items, tags, and custom dates for itemized billing."
+                ),
+                createRequest("Invoice with Blueprint Variance (Overrides)", "POST", "/functions/v1/create-invoice",
+                    { client: "Custom Project Client", status: "draft", due_date: "2025-12-25", service_type: "Custom Build", notes: "Customized version of standard blueprint", blueprint_usages: [{ blueprint_id: "bp-kitchen-standard-123", actual_sale_price: 15000, actual_materials_cost: 6000, actual_labor_cost: 4000 }], auto_calculate_from_blueprints: true },
+                    [],
+                    { success: true, message: "Invoice created successfully", invoice: { id: "new-uuid", invoice: "INV-006", client: "Custom Project Client", amount: 15000.00, status: "draft" }, blueprints_linked: 1, blueprint_variance: { estimated_total: 12000, actual_total: 10000, variance: -2000 } },
+                    "Create invoice with blueprint overrides (variance). Use 'blueprint_usages' to specify custom actual costs and prices for this specific invoice."
+                ),
+                createRequest("With Line Item Cost Override (NEW)", "POST", "/functions/v1/create-invoice",
+                    { client: "ABC Corp", status: "draft", due_date: "2025-12-30", service_type: "Consulting", notes: "Flat fee project with manual cost tracking", items: [{ description: "Website Development - Flat Fee", category: "Revenue", qty: 1, unit_price: 5000.00, override_split: { income: 5000, cost: 3200 } }, { description: "Hosting Setup", category: "Revenue", qty: 1, unit_price: 500.00, override_split: { income: 500, cost: 150 } }] },
+                    [],
+                    { success: true, message: "Invoice created successfully", invoice: { id: "new-uuid", invoice: "INV-007", client: "ABC Corp", amount: 5500.00, status: "draft", total_actual_cost: 3350.00, actual_profit: 2150.00 } },
+                    "Create invoice with line item cost overrides. Use 'override_split' to manually specify cost/profit breakdown for flat/bundled fee items."
                 )
             ]
         },
@@ -186,6 +310,11 @@ collection.item.push({
             { success: true, transactions: [{ id: "tx-1", transaction_id: "plaid_tx_123", date: "2025-11-10", name: "Home Depot Purchase", merchant_name: "Home Depot", amount: -3200.00, category: "Materials", pending: false }], total: 150, limit: 50, offset: 0 },
             "Get transactions with optional filtering by date range, category, and account."
         ),
+        createRequest("Get Transaction by ID", "GET", "/functions/v1/get-transactions", null,
+            [{ key: "transaction_id", value: "TX_UUID", disabled: false, description: "Transaction ID (required)" }],
+            { success: true, transaction: { id: "TX_UUID", transaction_id: "plaid_tx_123", date: "2025-11-10", name: "Home Depot Purchase", merchant_name: "Home Depot", amount: -3200.00, category: "Materials", pending: false, bank_account: { id: "acc-1", name: "Business Checking", mask: "1234" } } },
+            "Get a specific transaction by ID with full details."
+        ),
         createRequest("Sync Transactions", "POST", "/functions/v1/sync-transactions",
             { account_id: "ACCOUNT_ID" },
             [],
@@ -193,16 +322,22 @@ collection.item.push({
             "Sync transactions from connected bank accounts via Plaid."
         ),
         createRequest("Categorize Transaction", "POST", "/functions/v1/categorize-transaction",
-            { transaction_id: "TX_ID", category: "Materials", subcategory: "Building Supplies" },
+            { transaction_id: "TX_UUID", category_id: "CATEGORY_UUID", create_rule: false },
             [],
-            { success: true, message: "Transaction categorized", transaction: { id: "TX_ID", category: "Materials", subcategory: "Building Supplies", updated_at: "2025-11-22T10:00:00Z" } },
-            "Manually categorize a transaction. Used for expense tracking and reporting."
+            { success: true, categorization: { id: "cat-link-uuid", transaction_id: "TX_UUID", category_id: "CATEGORY_UUID", method: "manual", confidence: 1.0 }, rule_created: false, rule: null },
+            "Manually categorize a transaction. Set create_rule=true to auto-create a rule based on merchant."
         ),
-        createRequest("Auto Categorize Transactions", "POST", "/functions/v1/auto-categorize-transactions",
-            { apply_rules: true, use_ai: true },
+        createRequest("Auto Categorize All Uncategorized", "POST", "/functions/v1/auto-categorize-transactions",
+            {},
             [],
-            { success: true, categorized: 35, by_rules: 20, by_ai: 15, uncategorized_remaining: 5 },
-            "Auto-categorize uncategorized transactions using rules and AI."
+            { success: true, message: "Successfully categorized 35 of 40 transactions", categorized: 35, skipped: 5, breakdown: { rule_matched: 20, ai_categorized: 15, needs_review: 5 } },
+            "Auto-categorize ALL uncategorized transactions using rules first, then AI fallback. No parameters needed - just call with empty body."
+        ),
+        createRequest("Auto Categorize Specific Transactions", "POST", "/functions/v1/auto-categorize-transactions",
+            { transaction_ids: ["TX_UUID_1", "TX_UUID_2", "TX_UUID_3"] },
+            [],
+            { success: true, message: "Successfully categorized 3 of 3 transactions", categorized: 3, skipped: 0, breakdown: { rule_matched: 2, ai_categorized: 1, needs_review: 0 } },
+            "Auto-categorize specific transactions by ID. Use when you only want to process certain transactions."
         ),
         createRequest("Get Uncategorized Transactions", "POST", "/functions/v1/get-uncategorized-transactions",
             { limit: 50 },
@@ -471,41 +606,152 @@ collection.item.push({
 collection.item.push({
     name: "Categorization",
     item: [
-        createRequest("List Categorization Rules", "POST", "/functions/v1/list-categorization-rules",
+        // === CATEGORY MANAGEMENT ===
+        createRequest("Setup Default Categories", "POST", "/functions/v1/setup-default-categories",
             {},
             [],
-            { success: true, rules: [{ id: "rule-1", pattern: "Home Depot", category: "Materials", subcategory: "Building Supplies", priority: 10, match_type: "contains", is_active: true }], total: 15 },
-            "List all categorization rules for automatic transaction categorization."
+            { success: true, message: "Default categories created", categories_count: 12, categories: [{ id: "uuid", name: "Materials", description: "Building materials and supplies", color: "#4CAF50", icon: "package" }] },
+            "Initialize default expense categories for new users. Safe to call multiple times."
+        ),
+        createRequest("List Expense Categories", "GET", "/functions/v1/list-expense-categories", null,
+            [{ key: "include_stats", value: "true", disabled: true, description: "Include transaction/rule counts" }],
+            { success: true, categories: [{ id: "cat-1", name: "Materials", description: "Building materials", color: "#4CAF50", icon: "package", transaction_count: 42, rule_count: 3 }], total: 12 },
+            "List all expense categories with optional stats."
+        ),
+        createRequest("Create Expense Category", "POST", "/functions/v1/create-expense-category",
+            { name: "Equipment Rental", description: "Rented equipment and tools", color: "#FF9800", icon: "tool" },
+            [],
+            { success: true, message: "Category created successfully", category: { id: "new-cat-uuid", name: "Equipment Rental", color: "#FF9800" } },
+            "Create a custom expense category."
+        ),
+        createRequest("Update Expense Category", "POST", "/functions/v1/update-expense-category",
+            { category_id: "CATEGORY_ID", name: "Heavy Equipment", color: "#E65100" },
+            [],
+            { success: true, message: "Category updated successfully", category: { id: "CATEGORY_ID", name: "Heavy Equipment" }, updated_fields: ["name", "color"] },
+            "Update an existing category."
+        ),
+        createRequest("Delete Expense Category", "POST", "/functions/v1/delete-expense-category",
+            { category_id: "CATEGORY_ID", force: false },
+            [],
+            { success: true, message: "Category deleted successfully", deleted_category: { id: "CATEGORY_ID", name: "Equipment Rental" } },
+            "Delete category. Set force=true to delete with linked data."
+        ),
+
+        // === RULE MANAGEMENT ===
+        createRequest("List Categorization Rules", "GET", "/functions/v1/list-categorization-rules", null,
+            [
+                { key: "category_id", value: "", disabled: true, description: "Filter by category" },
+                { key: "rule_type", value: "", disabled: true, description: "Filter by type (vendor_exact, vendor_contains, etc)" },
+                { key: "is_active", value: "true", disabled: true, description: "Filter by active status" }
+            ],
+            { success: true, rules: [{ id: "rule-1", rule_type: "vendor_contains", match_value: "home depot", priority: 10, confidence_score: 0.95, is_active: true, times_applied: 42, expense_categories: { id: "cat-1", name: "Materials", color: "#4CAF50" } }], pagination: { total: 15, limit: 50, offset: 0, has_more: false } },
+            "List all categorization rules with their linked categories."
         ),
         createRequest("Create Categorization Rule", "POST", "/functions/v1/create-categorization-rule",
-            { pattern: "Starbucks", category: "Business Meals", match_type: "contains", priority: 5, apply_to_existing: true },
+            { category_id: "CATEGORY_ID", rule_type: "vendor_contains", match_value: "home depot", priority: 10, confidence_score: 0.95 },
             [],
-            { success: true, rule: { id: "rule-new", pattern: "Starbucks", category: "Business Meals", priority: 5, is_active: true }, applied_to_existing: 8 },
-            "Create new categorization rule. Optionally apply to existing uncategorized transactions."
+            { success: true, rule: { id: "rule-new", category_id: "CATEGORY_ID", rule_type: "vendor_contains", match_value: "home depot", priority: 10, is_active: true } },
+            "Create rule for automatic categorization. Types: vendor_exact, vendor_contains, description_contains, amount_range"
+        ),
+        createRequest("Update Categorization Rule", "POST", "/functions/v1/update-categorization-rule",
+            { rule_id: "RULE_ID", priority: 20, is_active: true },
+            [],
+            { success: true, message: "Rule updated successfully", rule: { id: "RULE_ID", priority: 20, is_active: true }, updated_fields: ["priority", "is_active"] },
+            "Update an existing rule."
         ),
         createRequest("Delete Categorization Rule", "POST", "/functions/v1/delete-categorization-rule",
             { rule_id: "RULE_ID" },
             [],
-            { success: true, message: "Categorization rule deleted", rule_id: "RULE_ID" },
-            "Delete a categorization rule. Does not affect already-categorized transactions."
+            { success: true, message: "Rule deleted successfully" },
+            "Delete a categorization rule."
+        ),
+        createRequest("Test Categorization Rule", "POST", "/functions/v1/test-categorization-rule",
+            { rule_type: "vendor_contains", match_value: "depot" },
+            [],
+            { success: true, matches: [{ id: "tx-1", name: "Home Depot #123", amount: -250.00 }], total_matches: 15 },
+            "Preview which transactions a rule would match before creating it."
         ),
         createRequest("Apply Categorization Rules", "POST", "/functions/v1/apply-categorization-rules",
-            { transaction_ids: ["TX_ID_1", "TX_ID_2"], apply_to_all_uncategorized: false },
-            [],
-            { success: true, applied: 25, rules_matched: [{ rule_id: "rule-1", transactions_affected: 15 }, { rule_id: "rule-2", transactions_affected: 10 }] },
-            "Manually apply categorization rules to specific transactions or all uncategorized transactions."
-        ),
-        createRequest("Suggest Category (AI)", "POST", "/functions/v1/suggest-category-ai",
-            { transaction_name: "Home Depot Building Materials", merchant_name: "Home Depot", amount: -1500.00 },
-            [],
-            { success: true, suggested_category: "Materials", suggested_subcategory: "Building Supplies", confidence: 0.95, reasoning: "Merchant known for building supplies, amount typical for materials purchase" },
-            "AI-powered category suggestion based on transaction details and historical patterns."
-        ),
-        createRequest("Setup Default Categories", "POST", "/functions/v1/setup-default-categories",
             {},
             [],
-            { success: true, created: 12, categories: ["Materials", "Labor", "Equipment", "Business Meals", "Office Supplies", "Insurance", "Marketing", "Utilities", "Professional Services", "Travel", "Maintenance", "Software"] },
-            "Create default categorization rules for common business expense categories."
+            { success: true, categorized: 23, total_processed: 45 },
+            "Run all active rules against uncategorized transactions."
+        ),
+
+        // === TRANSACTION CATEGORIZATION ===
+        createRequest("Get Uncategorized Transactions", "GET", "/functions/v1/get-uncategorized-transactions", null,
+            [
+                { key: "limit", value: "50", disabled: false, description: "Results per page" },
+                { key: "offset", value: "0", disabled: false, description: "Pagination offset" }
+            ],
+            { success: true, transactions: [{ id: "tx-uuid", transaction_id: "plaid_tx_123", date: "2025-12-01", amount: -125.50, name: "HOME DEPOT #1234", merchant_name: "Home Depot", pending: false, account: { id: "acc-uuid", name: "Business Checking", mask: "1234" } }], pagination: { total: 45, limit: 50, offset: 0, has_more: false } },
+            "List transactions pending categorization."
+        ),
+        createRequest("Get Categorized Transactions", "GET", "/functions/v1/get-categorized-transactions", null,
+            [
+                { key: "limit", value: "50", disabled: false, description: "Results per page" },
+                { key: "offset", value: "0", disabled: false, description: "Pagination offset" },
+                { key: "category_id", value: "", disabled: true, description: "Filter by category" },
+                { key: "method", value: "", disabled: true, description: "Filter by method (manual, rule, ai)" },
+                { key: "start_date", value: "", disabled: true, description: "Start date (YYYY-MM-DD)" },
+                { key: "end_date", value: "", disabled: true, description: "End date (YYYY-MM-DD)" }
+            ],
+            { success: true, transactions: [{ categorization_id: "cat-link-uuid", method: "manual", confidence: 1.0, is_user_override: true, categorized_at: "2025-12-05T10:00:00Z", category: { id: "cat-uuid", name: "Materials", color: "#4CAF50" }, transaction: { id: "tx-uuid", date: "2025-12-01", amount: -150.00, name: "Home Depot" } }], pagination: { total: 120, limit: 50, offset: 0, has_more: true } },
+            "List categorized transactions with filters."
+        ),
+        createRequest("Categorize Transaction", "POST", "/functions/v1/categorize-transaction",
+            { transaction_id: "TX_UUID", category_id: "CATEGORY_UUID", create_rule: false },
+            [],
+            { success: true, categorization: { id: "cat-link-uuid", transaction_id: "TX_UUID", category_id: "CATEGORY_UUID", method: "manual", confidence: 1.0 }, rule_created: false, rule: null },
+            "Manually assign category to a transaction. Set create_rule=true to auto-create a rule."
+        ),
+        createRequest("Uncategorize Transaction", "POST", "/functions/v1/uncategorize-transaction",
+            { transaction_id: "TX_UUID" },
+            [],
+            { success: true, message: "Transaction uncategorized successfully", removed_categorization: { transaction_id: "TX_UUID", previous_category: "Materials", previous_method: "manual" } },
+            "Remove categorization from a transaction."
+        ),
+        createRequest("Bulk Categorize Transactions", "POST", "/functions/v1/bulk-categorize-transactions",
+            { categorizations: [{ transaction_id: "TX_UUID_1", category_id: "CAT_UUID_MATERIALS" }, { transaction_id: "TX_UUID_2", category_id: "CAT_UUID_LABOR" }] },
+            [],
+            { success: true, message: "Bulk categorization complete", results: { total_requested: 2, inserted: 1, updated: 1, skipped: 0 } },
+            "Categorize multiple transactions at once. Max 100 per request."
+        ),
+
+        // === AI & AUTOMATION ===
+        createRequest("Auto-Categorize All", "POST", "/functions/v1/auto-categorize-transactions",
+            {},
+            [],
+            { success: true, message: "Successfully categorized 35 of 40 transactions", categorized: 35, skipped: 5, breakdown: { rule_matched: 20, ai_categorized: 15, needs_review: 5 } },
+            "Auto-categorize ALL uncategorized transactions using rules first, then AI. Just send empty body."
+        ),
+        createRequest("Auto-Categorize Specific", "POST", "/functions/v1/auto-categorize-transactions",
+            { transaction_ids: ["TX_UUID_1", "TX_UUID_2", "TX_UUID_3"] },
+            [],
+            { success: true, message: "Successfully categorized 3 of 3 transactions", categorized: 3, skipped: 0, breakdown: { rule_matched: 2, ai_categorized: 1, needs_review: 0 } },
+            "Auto-categorize specific transactions by ID."
+        ),
+        createRequest("Suggest Category (AI)", "POST", "/functions/v1/suggest-category-ai",
+            { transaction_id: "TX_UUID" },
+            [],
+            { success: true, suggestions: [{ category_id: "cat-1", category_name: "Materials", confidence: 0.95, reasoning: "Merchant known for building supplies" }] },
+            "Get AI-powered category suggestions without applying them."
+        ),
+        createRequest("Analyze & Suggest Categories", "POST", "/functions/v1/analyze-suggest-categories",
+            {},
+            [],
+            { success: true, suggested_categories: [{ name: "Fuel", description: "Gas and fuel expenses", confidence: 0.88, based_on_transactions: 15 }], existing_coverage: 0.75 },
+            "AI analyzes transaction patterns and suggests new categories to create."
+        ),
+
+        // === ANALYTICS ===
+        createRequest("Get Category Breakdown", "GET", "/functions/v1/get-category-breakdown", null,
+            [
+                { key: "start_date", value: "", disabled: true, description: "Start date (YYYY-MM-DD)" },
+                { key: "end_date", value: "", disabled: true, description: "End date (YYYY-MM-DD)" }
+            ],
+            { success: true, breakdown: [{ category_id: "cat-1", category_name: "Materials", color: "#4CAF50", transaction_count: 42, total_amount: 15000.00, percentage: 35.5 }], totals: { total_transactions: 120, total_amount: 42000.00, categorized_count: 100, uncategorized_count: 20 } },
+            "Get spending breakdown by category for analytics."
         )
     ]
 });

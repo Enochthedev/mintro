@@ -730,10 +730,28 @@ Categorize multiple transactions at once. Maximum 100 per request.
 
 Smart auto-categorization using rules first, then AI fallback.
 
-**Request Body:**
+**Request Body (All Options):**
 ```json
 {
-  "transaction_ids": ["tx-uuid-1", "tx-uuid-2", "tx-uuid-3"]
+  "transaction_ids": ["tx-uuid-1", "tx-uuid-2", "tx-uuid-3"],  // Optional - specific transactions
+  "limit": 500  // Optional - max transactions when processing all (default: 500)
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `transaction_ids` | array | No | Specific transaction IDs to categorize. If omitted, processes ALL uncategorized transactions. |
+| `limit` | number | No | Maximum transactions to process when `transaction_ids` is omitted (default: 500) |
+
+**Example 1: Categorize All Uncategorized Transactions**
+```json
+{}
+```
+
+**Example 2: Categorize Specific Transactions**
+```json
+{
+  "transaction_ids": ["tx-uuid-1", "tx-uuid-2"]
 }
 ```
 
@@ -741,10 +759,12 @@ Smart auto-categorization using rules first, then AI fallback.
 ```json
 {
   "success": true,
-  "message": "Auto-categorization complete",
-  "stats": {
-    "processed": 10,
-    "categorized": 8,
+  "message": "Successfully categorized 8 of 10 transactions",
+  "categorized": 8,
+  "skipped": 2,
+  "breakdown": {
+    "rule_matched": 5,
+    "ai_categorized": 3,
     "needs_review": 2
   }
 }

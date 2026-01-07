@@ -67,7 +67,7 @@ serve(async (req) => {
         id,
         category_id,
         method,
-        expense_categories (
+        expense_categories!category_id (
           name
         )
       `)

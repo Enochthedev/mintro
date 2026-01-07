@@ -70,7 +70,7 @@ serve(async (req) => {
             )
           )
         ),
-        expense_categories!inner (
+        expense_categories!category_id (
           id,
           name,
           color,
