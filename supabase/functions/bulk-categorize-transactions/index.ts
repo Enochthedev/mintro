@@ -157,6 +157,27 @@ serve(async (req) => {
             }
         }
 
+        // Also update the legacy 'category' column on transactions table for backward compatibility
+        // Build a map of category_id to category_name
+        const allCategoryIds = [...new Set(validCategorizations.map(c => c.category_id))];
+        const { data: categoryNames } = await supabaseClient
+            .from("expense_categories")
+            .select("id, name")
+            .in("id", allCategoryIds);
+
+        const categoryNameMap = new Map(categoryNames?.map(c => [c.id, c.name]) || []);
+
+        // Update each transaction's category column
+        for (const item of validCategorizations) {
+            const categoryName = categoryNameMap.get(item.category_id);
+            if (categoryName) {
+                await supabaseClient
+                    .from("transactions")
+                    .update({ category: categoryName })
+                    .eq("id", item.transaction_id);
+            }
+        }
+
         const skippedCount = categorizations.length - validCategorizations.length;
 
         return new Response(

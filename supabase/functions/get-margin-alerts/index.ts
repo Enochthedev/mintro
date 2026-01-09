@@ -7,6 +7,14 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, OPTIONS",
 };
 
+/**
+ * get-margin-alerts
+ * 
+ * REFACTORED: Now analyzes ALL invoices, not just those with pre-set costs.
+ * Calculates costs from linked transactions (transaction_job_allocations) as primary source.
+ * Alerts are generated based on calculated margins, not just stored values.
+ */
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -44,98 +52,173 @@ serve(async (req) => {
     startDate.setDate(startDate.getDate() - days_back);
 
     // ============================================
-    // 1. LOW MARGIN JOBS
+    // GET ALL INVOICES (no cost filter)
     // ============================================
-    const { data: recentInvoices } = await supabaseClient
+    const { data: recentInvoices, error: invoicesError } = await supabaseClient
       .from("invoices")
       .select(`
-        *,
+        id,
+        invoice,
+        client,
+        amount,
+        invoice_date,
+        service_type,
+        total_actual_cost,
+        actual_profit,
+        cost_override_by_user,
         blueprint_usage (
-          *,
+          id,
           cost_blueprints (
+            id,
             name,
-            target_profit_margin
+            target_profit_margin,
+            total_estimated_cost
           )
         )
       `)
       .eq("user_id", user.id)
-      .not("total_actual_cost", "is", null)
       .gte("invoice_date", startDate.toISOString().split('T')[0]);
 
-    const lowMarginJobs = recentInvoices
-      ?.map(inv => {
-        const revenue = parseFloat(inv.amount || 0);
-        const profit = parseFloat(inv.actual_profit || 0);
-        const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
-
-        return {
-          invoice_id: inv.id,
-          invoice_number: inv.invoice,
-          client: inv.client,
-          service_type: inv.service_type,
-          invoice_date: inv.invoice_date,
-          revenue,
-          cost: parseFloat(inv.total_actual_cost || 0),
-          profit,
-          margin: parseFloat(margin.toFixed(2)),
-          expected_margin: inv.blueprint_usage?.[0]?.cost_blueprints?.target_profit_margin || null,
-        };
-      })
-      .filter(job => job.margin < margin_threshold && job.margin >= 0)
-      .sort((a, b) => a.margin - b.margin) || [];
+    if (invoicesError) {
+      throw invoicesError;
+    }
 
     // ============================================
-    // 2. NEGATIVE PROFIT JOBS
+    // GET LINKED TRANSACTIONS FOR ALL INVOICES
     // ============================================
-    const negativeJobs = recentInvoices
-      ?.map(inv => {
-        const revenue = parseFloat(inv.amount || 0);
-        const cost = parseFloat(inv.total_actual_cost || 0);
-        const profit = parseFloat(inv.actual_profit || 0);
+    const invoiceIds = recentInvoices?.map(inv => inv.id) || [];
 
-        return {
-          invoice_id: inv.id,
-          invoice_number: inv.invoice,
-          client: inv.client,
-          service_type: inv.service_type,
-          invoice_date: inv.invoice_date,
-          revenue,
-          cost,
-          loss: Math.abs(profit),
-        };
-      })
-      .filter(job => job.loss > 0 && job.revenue - job.cost < 0)
-      .sort((a, b) => b.loss - a.loss) || [];
+    const { data: allAllocations, error: allocError } = await supabaseClient
+      .from("transaction_job_allocations")
+      .select("job_id, allocation_amount")
+      .in("job_id", invoiceIds.length > 0 ? invoiceIds : ['00000000-0000-0000-0000-000000000000']);
+
+    if (allocError) {
+      console.error("Error fetching allocations:", allocError);
+    }
+
+    // Group allocations by invoice
+    const allocationsByInvoice = new Map<string, number>();
+    (allAllocations || []).forEach((alloc: { job_id: string; allocation_amount: number | string }) => {
+      const current = allocationsByInvoice.get(alloc.job_id) || 0;
+      allocationsByInvoice.set(alloc.job_id, current + Math.abs(parseFloat(String(alloc.allocation_amount || 0))));
+    });
+
+    // ============================================
+    // CALCULATE PROFIT FOR EACH INVOICE
+    // ============================================
+    const invoiceCalculations = (recentInvoices || []).map(inv => {
+      const revenue = parseFloat(inv.amount || 0);
+
+      // Get costs from linked transactions (primary source)
+      const transactionCosts = allocationsByInvoice.get(inv.id) || 0;
+
+      // Get estimated costs from blueprints (if any)
+      const blueprintCosts = (inv.blueprint_usage || []).reduce(
+        (sum: number, usage: any) => sum + parseFloat(usage.cost_blueprints?.total_estimated_cost || 0),
+        0
+      );
+
+      // Determine effective cost
+      let effectiveCost: number;
+      if (inv.cost_override_by_user && inv.total_actual_cost !== null) {
+        effectiveCost = parseFloat(inv.total_actual_cost || 0);
+      } else if (transactionCosts > 0) {
+        effectiveCost = transactionCosts;
+      } else if (inv.total_actual_cost !== null) {
+        effectiveCost = parseFloat(inv.total_actual_cost || 0);
+      } else {
+        effectiveCost = 0;
+      }
+
+      const profit = revenue - effectiveCost;
+      const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
+      const hasCostData = transactionCosts > 0 || blueprintCosts > 0 || inv.total_actual_cost !== null;
+
+      // Get blueprint info
+      const blueprints = (inv.blueprint_usage || []).map((usage: any) => ({
+        id: usage.cost_blueprints?.id,
+        name: usage.cost_blueprints?.name,
+        target_margin: usage.cost_blueprints?.target_profit_margin,
+        estimated_cost: parseFloat(usage.cost_blueprints?.total_estimated_cost || 0),
+      })).filter((bp: any) => bp.id);
+
+      return {
+        invoice_id: inv.id,
+        invoice_number: inv.invoice,
+        client: inv.client,
+        service_type: inv.service_type,
+        invoice_date: inv.invoice_date,
+        revenue,
+        cost: effectiveCost,
+        profit,
+        margin: parseFloat(margin.toFixed(2)),
+        has_cost_data: hasCostData,
+        blueprints,
+        estimated_cost: blueprintCosts,
+        cost_variance: blueprintCosts > 0 ? effectiveCost - blueprintCosts : null,
+        cost_variance_percent: blueprintCosts > 0 ? ((effectiveCost - blueprintCosts) / blueprintCosts) * 100 : null,
+        expected_margin: blueprints[0]?.target_margin || null,
+      };
+    });
+
+    // ============================================
+    // 1. LOW MARGIN JOBS (only those with cost data)
+    // ============================================
+    const lowMarginJobs = invoiceCalculations
+      .filter(job => job.has_cost_data && job.margin < margin_threshold && job.margin >= 0)
+      .sort((a, b) => a.margin - b.margin)
+      .slice(0, 10)
+      .map(job => ({
+        invoice_id: job.invoice_id,
+        invoice_number: job.invoice_number,
+        client: job.client,
+        service_type: job.service_type,
+        invoice_date: job.invoice_date,
+        revenue: job.revenue,
+        cost: job.cost,
+        profit: job.profit,
+        margin: job.margin,
+        expected_margin: job.expected_margin,
+      }));
+
+    // ============================================
+    // 2. NEGATIVE PROFIT JOBS (only those with cost data)
+    // ============================================
+    const negativeJobs = invoiceCalculations
+      .filter(job => job.has_cost_data && job.profit < 0)
+      .sort((a, b) => a.profit - b.profit)
+      .slice(0, 10)
+      .map(job => ({
+        invoice_id: job.invoice_id,
+        invoice_number: job.invoice_number,
+        client: job.client,
+        service_type: job.service_type,
+        invoice_date: job.invoice_date,
+        revenue: job.revenue,
+        cost: job.cost,
+        loss: Math.abs(job.profit),
+      }));
 
     // ============================================
     // 3. COST SPIKES (vs Blueprint Estimates)
     // ============================================
-    const costSpikes = recentInvoices
-      ?.filter(inv => inv.blueprint_usage && inv.blueprint_usage.length > 0)
-      .map(inv => {
-        const estimatedCost = inv.blueprint_usage.reduce(
-          (sum: number, usage: any) => sum + parseFloat(usage.cost_blueprints?.total_estimated_cost || 0),
-          0
-        );
-        const actualCost = parseFloat(inv.total_actual_cost || 0);
-        const variance = actualCost - estimatedCost;
-        const variancePercent = estimatedCost > 0 ? (variance / estimatedCost) * 100 : 0;
-
-        return {
-          invoice_id: inv.id,
-          invoice_number: inv.invoice,
-          client: inv.client,
-          service_type: inv.service_type,
-          invoice_date: inv.invoice_date,
-          estimated_cost: parseFloat(estimatedCost.toFixed(2)),
-          actual_cost: parseFloat(actualCost.toFixed(2)),
-          variance: parseFloat(variance.toFixed(2)),
-          variance_percent: parseFloat(variancePercent.toFixed(2)),
-          blueprints_used: inv.blueprint_usage.map((u: any) => u.cost_blueprints?.name).filter(Boolean),
-        };
-      })
-      .filter(job => job.variance_percent > cost_spike_threshold)
-      .sort((a, b) => b.variance_percent - a.variance_percent) || [];
+    const costSpikes = invoiceCalculations
+      .filter(job => job.has_cost_data && job.cost_variance_percent !== null && job.cost_variance_percent > cost_spike_threshold)
+      .sort((a, b) => (b.cost_variance_percent || 0) - (a.cost_variance_percent || 0))
+      .slice(0, 10)
+      .map(job => ({
+        invoice_id: job.invoice_id,
+        invoice_number: job.invoice_number,
+        client: job.client,
+        service_type: job.service_type,
+        invoice_date: job.invoice_date,
+        estimated_cost: parseFloat(job.estimated_cost.toFixed(2)),
+        actual_cost: parseFloat(job.cost.toFixed(2)),
+        variance: parseFloat((job.cost_variance || 0).toFixed(2)),
+        variance_percent: parseFloat((job.cost_variance_percent || 0).toFixed(2)),
+        blueprints_used: job.blueprints.map(bp => bp.name).filter(Boolean),
+      }));
 
     // ============================================
     // 4. DECLINING MARGIN TREND
@@ -145,31 +228,53 @@ serve(async (req) => {
 
     const { data: historicalInvoices } = await supabaseClient
       .from("invoices")
-      .select("*")
+      .select("id, amount, invoice_date, total_actual_cost, cost_override_by_user")
       .eq("user_id", user.id)
-      .not("total_actual_cost", "is", null)
       .gte("invoice_date", threeMonthsAgo.toISOString().split('T')[0])
       .order("invoice_date", { ascending: true });
 
+    // Get allocations for historical invoices too
+    const historicalIds = historicalInvoices?.map(inv => inv.id) || [];
+    const { data: historicalAllocations } = await supabaseClient
+      .from("transaction_job_allocations")
+      .select("job_id, allocation_amount")
+      .in("job_id", historicalIds.length > 0 ? historicalIds : ['00000000-0000-0000-0000-000000000000']);
+
+    const historicalAllocationsByInvoice = new Map<string, number>();
+    (historicalAllocations || []).forEach((alloc: { job_id: string; allocation_amount: number | string }) => {
+      const current = historicalAllocationsByInvoice.get(alloc.job_id) || 0;
+      historicalAllocationsByInvoice.set(alloc.job_id, current + Math.abs(parseFloat(String(alloc.allocation_amount || 0))));
+    });
+
     let decliningTrend = null;
 
-    if (historicalInvoices && historicalInvoices.length >= 6) {
-      const half = Math.floor(historicalInvoices.length / 2);
-      const firstHalf = historicalInvoices.slice(0, half);
-      const secondHalf = historicalInvoices.slice(half);
+    const historicalCalcs = (historicalInvoices || []).map(inv => {
+      const revenue = parseFloat(inv.amount || 0);
+      const transactionCosts = historicalAllocationsByInvoice.get(inv.id) || 0;
+      let effectiveCost = 0;
 
-      const avgMarginFirst = firstHalf.reduce((sum, inv) => {
-        const revenue = parseFloat(inv.amount || 0);
-        const profit = parseFloat(inv.actual_profit || 0);
-        return sum + (revenue > 0 ? (profit / revenue) * 100 : 0);
-      }, 0) / firstHalf.length;
+      if (inv.cost_override_by_user && inv.total_actual_cost !== null) {
+        effectiveCost = parseFloat(inv.total_actual_cost || 0);
+      } else if (transactionCosts > 0) {
+        effectiveCost = transactionCosts;
+      } else if (inv.total_actual_cost !== null) {
+        effectiveCost = parseFloat(inv.total_actual_cost || 0);
+      }
 
-      const avgMarginSecond = secondHalf.reduce((sum, inv) => {
-        const revenue = parseFloat(inv.amount || 0);
-        const profit = parseFloat(inv.actual_profit || 0);
-        return sum + (revenue > 0 ? (profit / revenue) * 100 : 0);
-      }, 0) / secondHalf.length;
+      const profit = revenue - effectiveCost;
+      const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
+      const hasCostData = transactionCosts > 0 || inv.total_actual_cost !== null;
 
+      return { margin, hasCostData };
+    }).filter(c => c.hasCostData);
+
+    if (historicalCalcs.length >= 6) {
+      const half = Math.floor(historicalCalcs.length / 2);
+      const firstHalf = historicalCalcs.slice(0, half);
+      const secondHalf = historicalCalcs.slice(half);
+
+      const avgMarginFirst = firstHalf.reduce((sum, c) => sum + c.margin, 0) / firstHalf.length;
+      const avgMarginSecond = secondHalf.reduce((sum, c) => sum + c.margin, 0) / secondHalf.length;
       const decline = avgMarginFirst - avgMarginSecond;
 
       if (decline > 5) {
@@ -188,25 +293,19 @@ serve(async (req) => {
     // ============================================
     const blueprintPerformance = new Map();
 
-    recentInvoices?.forEach(inv => {
-      inv.blueprint_usage?.forEach((usage: any) => {
-        const blueprintId = usage.cost_blueprints?.id;
-        if (!blueprintId) return;
+    invoiceCalculations.filter(c => c.has_cost_data).forEach(inv => {
+      inv.blueprints.forEach((bp: any) => {
+        if (!bp.id) return;
 
-        const revenue = parseFloat(inv.amount || 0);
-        const profit = parseFloat(inv.actual_profit || 0);
-        const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
-
-        const current = blueprintPerformance.get(blueprintId) || {
-          blueprint_name: usage.cost_blueprints?.name,
+        const current = blueprintPerformance.get(bp.id) || {
+          blueprint_name: bp.name,
           margins: [],
           usage_count: 0,
         };
 
-        current.margins.push(margin);
+        current.margins.push(inv.margin);
         current.usage_count += 1;
-
-        blueprintPerformance.set(blueprintId, current);
+        blueprintPerformance.set(bp.id, current);
       });
     });
 
@@ -221,15 +320,34 @@ serve(async (req) => {
         };
       })
       .filter(bp => bp.average_margin < margin_threshold)
-      .sort((a, b) => a.average_margin - b.average_margin);
+      .sort((a, b) => a.average_margin - b.average_margin)
+      .slice(0, 5);
+
+    // ============================================
+    // 6. INVOICES WITHOUT COST DATA
+    // ============================================
+    const invoicesWithoutCostData = invoiceCalculations
+      .filter(inv => !inv.has_cost_data)
+      .slice(0, 5)
+      .map(inv => ({
+        invoice_id: inv.invoice_id,
+        invoice_number: inv.invoice_number,
+        client: inv.client,
+        invoice_date: inv.invoice_date,
+        revenue: inv.revenue,
+        message: "No cost data. Link transactions to track profit.",
+      }));
 
     // ============================================
     // SUMMARY
     // ============================================
-    const totalAlerts = 
-      lowMarginJobs.length + 
-      negativeJobs.length + 
-      costSpikes.length + 
+    const invoicesWithCostData = invoiceCalculations.filter(c => c.has_cost_data).length;
+    const totalInvoices = invoiceCalculations.length;
+
+    const totalAlerts =
+      lowMarginJobs.length +
+      negativeJobs.length +
+      costSpikes.length +
       underperformingBlueprints.length +
       (decliningTrend ? 1 : 0);
 
@@ -250,20 +368,35 @@ serve(async (req) => {
           cost_spikes_count: costSpikes.length,
           underperforming_blueprints_count: underperformingBlueprints.length,
           total_revenue_lost: parseFloat(totalRevenueLost.toFixed(2)),
+          invoices_analyzed: totalInvoices,
+          invoices_with_cost_data: invoicesWithCostData,
         },
         alerts: {
-          low_margin_jobs: lowMarginJobs.slice(0, 10),
-          negative_profit_jobs: negativeJobs.slice(0, 10),
-          cost_spikes: costSpikes.slice(0, 10),
-          underperforming_blueprints: underperformingBlueprints.slice(0, 5),
+          low_margin_jobs: lowMarginJobs,
+          negative_profit_jobs: negativeJobs,
+          cost_spikes: costSpikes,
+          underperforming_blueprints: underperformingBlueprints,
           declining_margin_trend: decliningTrend,
+          missing_cost_data: invoicesWithoutCostData,
         },
         recommendations: generateRecommendations(
           lowMarginJobs.length,
           negativeJobs.length,
           costSpikes.length,
-          decliningTrend
+          decliningTrend,
+          invoicesWithoutCostData.length,
+          totalInvoices
         ),
+        data_quality: {
+          message: invoicesWithCostData === 0
+            ? "No cost data available. Link bank transactions to invoices to see margin alerts."
+            : invoicesWithCostData < totalInvoices
+              ? `${invoicesWithCostData} of ${totalInvoices} invoices have cost data. Alerts may be incomplete.`
+              : "All invoices have cost data for comprehensive alerting.",
+          cost_data_coverage: totalInvoices > 0
+            ? parseFloat(((invoicesWithCostData / totalInvoices) * 100).toFixed(2))
+            : 0,
+        },
       }),
       {
         status: 200,
@@ -283,9 +416,15 @@ function generateRecommendations(
   lowMarginCount: number,
   negativeCount: number,
   spikeCount: number,
-  decliningTrend: any
+  decliningTrend: any,
+  missingCostDataCount: number,
+  totalInvoices: number
 ): string[] {
   const recommendations: string[] = [];
+
+  if (missingCostDataCount > 0 && missingCostDataCount > totalInvoices * 0.5) {
+    recommendations.push("📌 Most invoices are missing cost data. Link bank transactions to invoices to track profitability.");
+  }
 
   if (negativeCount > 0) {
     recommendations.push("⚠️ You have jobs losing money. Review pricing strategy immediately.");

@@ -141,6 +141,12 @@ serve(async (req) => {
       }
     }
 
+    // Also update the legacy 'category' column on transactions table for backward compatibility
+    await supabaseClient
+      .from("transactions")
+      .update({ category: category.name })
+      .eq("id", transaction_id);
+
     return new Response(
       JSON.stringify({
         success: true,

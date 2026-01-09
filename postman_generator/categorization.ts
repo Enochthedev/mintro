@@ -208,7 +208,8 @@ export function getCategorizationSection() {
                 {
                     success: true,
                     transactions: [
-                        { id: "tx-uuid", transaction_id: "plaid_tx_123", date: "2025-12-01", amount: -125.50, name: "HOME DEPOT #1234", merchant_name: "Home Depot", pending: false, account: { id: "acc-uuid", name: "Business Checking", mask: "1234", institution: "Chase" } }
+                        { id: "tx-uuid-1", transaction_id: "plaid_tx_123", date: "2025-12-01", amount: -125.50, name: "HOME DEPOT #1234", merchant_name: "Home Depot", pending: false, account: { id: "acc-uuid", name: "Business Checking", mask: "1234", institution: "Chase" } },
+                        { id: "tx-uuid-2", transaction_id: "plaid_tx_456", date: "2025-12-02", amount: -89.99, name: "LOWES #5678", merchant_name: "Lowes", pending: false, account: { id: "acc-uuid", name: "Business Checking", mask: "1234", institution: "Chase" } }
                     ],
                     pagination: { total: 45, limit: 50, offset: 0, has_more: false }
                 },
@@ -234,45 +235,51 @@ export function getCategorizationSection() {
                             categorized_at: "2025-12-05T10:00:00Z",
                             category: { id: "cat-uuid", name: "Materials", color: "#4CAF50", icon: "package" },
                             rule: { id: "rule-uuid", match_value: "home depot", rule_type: "vendor_contains" },
-                            transaction: { id: "tx-uuid", date: "2025-12-01", amount: -150.00, name: "Home Depot", merchant_name: "Home Depot", pending: false }
+                            transaction: { id: "tx-uuid-1", transaction_id: "plaid_tx_123", date: "2025-12-01", amount: -150.00, name: "Home Depot", merchant_name: "Home Depot", pending: false }
                         }
                     ],
                     pagination: { total: 120, limit: 50, offset: 0, has_more: true }
                 },
-                "List categorized transactions with filters."
+                "List categorized transactions. IMPORTANT: Use 'transaction.id' (e.g. tx-uuid-1) for categorize/uncategorize endpoints, NOT 'categorization_id'."
             ),
-            createRequest("Categorize Transaction", "POST", "/functions/v1/categorize-transaction",
-                { transaction_id: "TX_UUID", category_id: "CATEGORY_UUID", create_rule: false },
-                [],
-                { success: true, categorization: { id: "cat-link-uuid", transaction_id: "TX_UUID", category_id: "CATEGORY_UUID", method: "manual", confidence: 1.0, is_user_override: false }, rule_created: false, rule: null },
-                "Manually assign category to a transaction. Set create_rule=true to auto-create a rule based on merchant.",
-                [
-                    {
-                        name: "With Rule Creation",
-                        status: 200,
-                        body: {
+            {
+                name: "Manual Categorization",
+                item: [
+                    createRequest("Categorize Transaction (Manual)", "POST", "/functions/v1/categorize-transaction",
+                        { transaction_id: "tx-uuid-1", category_id: "CATEGORY_UUID", create_rule: false },
+                        [],
+                        { success: true, categorization: { id: "cat-link-uuid", transaction_id: "tx-uuid-1", category_id: "CATEGORY_UUID", method: "manual", confidence: 1.0, is_user_override: false }, rule_created: false, rule: null },
+                        "Assign/change category for a transaction. Works for both NEW and ALREADY CATEGORIZED transactions (no need to uncategorize first). Use 'transaction.id' from get-categorized-transactions.",
+                        [
+                            {
+                                name: "Override Previous Category",
+                                status: 200,
+                                body: {
+                                    success: true,
+                                    categorization: { id: "cat-link-uuid", transaction_id: "tx-uuid-1", category_id: "NEW_CATEGORY_UUID", method: "manual", confidence: 1.0, is_user_override: true, previous_category_id: "OLD_CATEGORY_UUID" },
+                                    rule_created: false
+                                }
+                            }
+                        ]
+                    ),
+                    createRequest("Categorize & Create Rule", "POST", "/functions/v1/categorize-transaction",
+                        { transaction_id: "tx-uuid-1", category_id: "CATEGORY_UUID", create_rule: true },
+                        [],
+                        {
                             success: true,
-                            categorization: { id: "cat-link-uuid", transaction_id: "TX_UUID", category_id: "CATEGORY_UUID", method: "manual", confidence: 1.0 },
+                            categorization: { id: "cat-link-uuid", transaction_id: "tx-uuid-1", category_id: "CATEGORY_UUID", method: "manual", confidence: 1.0 },
                             rule_created: true,
                             rule: { id: "new-rule-uuid", rule_type: "vendor_contains", match_value: "home depot", category_id: "CATEGORY_UUID" }
-                        }
-                    },
-                    {
-                        name: "Override Previous Category",
-                        status: 200,
-                        body: {
-                            success: true,
-                            categorization: { id: "cat-link-uuid", transaction_id: "TX_UUID", category_id: "NEW_CATEGORY_UUID", method: "manual", confidence: 1.0, is_user_override: true, previous_category_id: "OLD_CATEGORY_UUID" },
-                            rule_created: false
-                        }
-                    }
+                        },
+                        "Manually assign category and create a rule. Use the 'id' field from get-uncategorized-transactions."
+                    )
                 ]
-            ),
+            },
             createRequest("Uncategorize Transaction", "POST", "/functions/v1/uncategorize-transaction",
-                { transaction_id: "TX_UUID" },
+                { transaction_id: "tx-uuid-1" },
                 [],
-                { success: true, message: "Transaction uncategorized successfully", removed_categorization: { transaction_id: "TX_UUID", transaction_name: "Home Depot", previous_category: "Materials", previous_method: "manual" } },
-                "Remove categorization from a transaction."
+                { success: true, message: "Transaction uncategorized successfully", removed_categorization: { transaction_id: "tx-uuid-1", transaction_name: "Home Depot", previous_category: "Materials", previous_method: "manual" } },
+                "Remove categorization from a transaction. Use the 'id' field from transactions."
             ),
             createRequest("Bulk Categorize Transactions", "POST", "/functions/v1/bulk-categorize-transactions",
                 { categorizations: [{ transaction_id: "TX_UUID_1", category_id: "CAT_UUID_MATERIALS" }, { transaction_id: "TX_UUID_2", category_id: "CAT_UUID_LABOR" }, { transaction_id: "TX_UUID_3", category_id: "CAT_UUID_MATERIALS" }] },

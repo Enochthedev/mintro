@@ -5,6 +5,7 @@ import { PROJECT_URL, createRequest } from "./helpers.ts";
 import { getAuthenticationSection } from "./auth.ts";
 import { getCategorizationSection } from "./categorization.ts";
 import { getTransactionsSection } from "./transactions.ts";
+import { getAnalyticsSection } from "./analytics.ts";
 
 // Build the collection
 const collection = {
@@ -263,54 +264,8 @@ collection.item.push({
     ]
 });
 
-// ANALYTICS
-collection.item.push({
-    name: "Analytics",
-    description: "Business analytics and reporting",
-    item: [
-        createRequest("Get Dashboard Summary", "GET", "/functions/v1/get-dashboard-summary", null,
-            [],
-            {
-                success: true,
-                kpis: { current_month_revenue: 25000.00, current_month_profit: 8500.00, average_profit_margin: 34.0, ytd_revenue: 150000.00, revenue_change_mom: 15.5, trend: "up" },
-                recent_activity: { recent_invoices: [{ id: "inv-1", invoice_number: "INV-001", client: "ABC Corp", amount: 5000 }] },
-                alerts: { low_margin_jobs: { count: 2 }, low_stock_items: { count: 3 }, overdue_invoices: { count: 1, amount: 2500 }, uncategorized_transactions: { count: 15 } },
-                quick_stats: { active_blueprints: 8, inventory_items: 45, categorization_rules: 12 }
-            },
-            "Get comprehensive dashboard summary with KPIs, recent activity, and alerts."
-        ),
-        createRequest("Get Business Profitability", "POST", "/functions/v1/get-business-profitability",
-            { start_date: "2025-01-01", end_date: "2025-12-31", group_by: "month" },
-            [],
-            { success: true, profitability: [{ period: "2025-01", revenue: 15000, costs: 9000, profit: 6000, margin: 40.0 }], totals: { revenue: 150000, costs: 90000, profit: 60000, margin: 40.0 } },
-            "Get detailed profitability analysis over time."
-        ),
-        createRequest("Get Profit Trends", "POST", "/functions/v1/get-profit-trends",
-            { period: "month", months: 12 },
-            [],
-            { success: true, trends: [{ period: "2025-01", profit: 6000, margin: 40.0, change_pct: 5.5 }] },
-            "Get profit trends over specified period."
-        ),
-        createRequest("Get Margin Analysis", "POST", "/functions/v1/get-margin-analysis",
-            { group_by: "service_type" },
-            [],
-            { success: true, analysis: [{ service_type: "Kitchen Remodel", avg_margin: 42.5, job_count: 15, best_margin: 55.0, worst_margin: 25.0 }] },
-            "Analyze margins by service type or other dimensions."
-        ),
-        createRequest("Get Margin Alerts", "POST", "/functions/v1/get-margin-alerts",
-            { threshold: 20.0 },
-            [],
-            { success: true, alerts: [{ invoice_id: "inv-1", invoice_number: "INV-001", client: "ABC Corp", margin: 15.5, threshold: 20.0, shortfall: 4.5 }], total_alerts: 3 },
-            "Get invoices with margins below threshold."
-        ),
-        createRequest("Get Vendor Price Changes", "POST", "/functions/v1/get-vendor-price-changes",
-            { days: 90 },
-            [],
-            { success: true, changes: [{ vendor: "Home Depot", item: "2x4 Lumber", old_price: 5.99, new_price: 6.49, change_pct: 8.3, detected_date: "2025-11-01" }] },
-            "Track vendor price changes over time."
-        )
-    ]
-});
+// ANALYTICS & PROFITABILITY (modular)
+collection.item.push(getAnalyticsSection());
 
 // PLAID INTEGRATION
 collection.item.push({

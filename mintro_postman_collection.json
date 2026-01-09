@@ -3803,8 +3803,8 @@
       ]
     },
     {
-      "name": "Analytics",
-      "description": "Business analytics and reporting",
+      "name": "📊 Analytics & Profitability",
+      "description": "Business analytics, profitability tracking, and margin analysis. The profitability engine calculates profit using linked bank transactions as the primary cost source. Blueprints and manual overrides are optional enhancements.",
       "item": [
         {
           "name": "Get Dashboard Summary",
@@ -3876,7 +3876,7 @@
         {
           "name": "Get Business Profitability",
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [
               {
                 "key": "Authorization",
@@ -3896,24 +3896,29 @@
                 "functions",
                 "v1",
                 "get-business-profitability"
+              ],
+              "query": [
+                {
+                  "key": "start_date",
+                  "value": "2025-01-01",
+                  "disabled": false,
+                  "description": "Start date (YYYY-MM-DD)"
+                },
+                {
+                  "key": "end_date",
+                  "value": "2025-12-31",
+                  "disabled": false,
+                  "description": "End date (YYYY-MM-DD)"
+                }
               ]
             },
-            "description": "Get detailed profitability analysis over time.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"start_date\": \"2025-01-01\",\n  \"end_date\": \"2025-12-31\",\n  \"group_by\": \"month\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "description": "Get comprehensive profitability analysis. Calculates profit using linked bank transactions as primary cost source. Works for ALL invoices - blueprints are optional."
           },
           "response": [
             {
               "name": "Success Response",
               "originalRequest": {
-                "method": "POST",
+                "method": "GET",
                 "header": [
                   {
                     "key": "Authorization",
@@ -3933,18 +3938,23 @@
                     "functions",
                     "v1",
                     "get-business-profitability"
+                  ],
+                  "query": [
+                    {
+                      "key": "start_date",
+                      "value": "2025-01-01",
+                      "disabled": false,
+                      "description": "Start date (YYYY-MM-DD)"
+                    },
+                    {
+                      "key": "end_date",
+                      "value": "2025-12-31",
+                      "disabled": false,
+                      "description": "End date (YYYY-MM-DD)"
+                    }
                   ]
                 },
-                "description": "Get detailed profitability analysis over time.",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"start_date\": \"2025-01-01\",\n  \"end_date\": \"2025-12-31\",\n  \"group_by\": \"month\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
+                "description": "Get comprehensive profitability analysis. Calculates profit using linked bank transactions as primary cost source. Works for ALL invoices - blueprints are optional."
               },
               "status": "OK",
               "code": 200,
@@ -3954,14 +3964,192 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"profitability\": [\n    {\n      \"period\": \"2025-01\",\n      \"revenue\": 15000,\n      \"costs\": 9000,\n      \"profit\": 6000,\n      \"margin\": 40\n    }\n  ],\n  \"totals\": {\n    \"revenue\": 150000,\n    \"costs\": 90000,\n    \"profit\": 60000,\n    \"margin\": 40\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"period\": {\n    \"start_date\": \"2025-01-01\",\n    \"end_date\": \"2025-12-31\"\n  },\n  \"overview\": {\n    \"total_revenue\": 150000,\n    \"total_expenses\": 90000,\n    \"net_profit\": 60000,\n    \"profit_margin\": 40\n  },\n  \"job_metrics\": {\n    \"total_invoices\": 45,\n    \"invoices_with_cost_data\": 40,\n    \"invoices_with_transaction_costs\": 35,\n    \"invoices_with_blueprint_estimates\": 20,\n    \"total_job_costs\": 78000,\n    \"total_job_profit\": 47000,\n    \"average_job_profit\": 1175,\n    \"average_job_margin\": 37.6\n  },\n  \"service_type_breakdown\": [\n    {\n      \"service_type\": \"Kitchen Remodel\",\n      \"revenue\": 50000,\n      \"cost\": 32000,\n      \"profit\": 18000,\n      \"profit_margin\": 36\n    }\n  ],\n  \"month_over_month\": {\n    \"current_month_revenue\": 15000,\n    \"last_month_revenue\": 13500,\n    \"revenue_change_percent\": 11.11,\n    \"trend\": \"up\"\n  },\n  \"data_quality\": {\n    \"message\": \"40 of 45 invoices have cost data.\",\n    \"invoices_missing_cost_data\": 5\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Estimated vs Actual Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{PROJECT_URL}}/functions/v1/get-estimated-vs-actual-summary",
+              "host": [
+                "{{PROJECT_URL}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "get-estimated-vs-actual-summary"
+              ],
+              "query": [
+                {
+                  "key": "start_date",
+                  "value": "2025-01-01",
+                  "disabled": false,
+                  "description": "Start date (YYYY-MM-DD)"
+                },
+                {
+                  "key": "end_date",
+                  "value": "2025-12-31",
+                  "disabled": false,
+                  "description": "End date (YYYY-MM-DD)"
+                }
+              ]
+            },
+            "description": "Get aggregate variance analysis comparing Blueprint Estimates vs Actual Costs across all jobs. Only includes jobs that have blueprint estimates attached."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{ACCESS_TOKEN}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{PROJECT_URL}}/functions/v1/get-estimated-vs-actual-summary",
+                  "host": [
+                    "{{PROJECT_URL}}"
+                  ],
+                  "path": [
+                    "functions",
+                    "v1",
+                    "get-estimated-vs-actual-summary"
+                  ],
+                  "query": [
+                    {
+                      "key": "start_date",
+                      "value": "2025-01-01",
+                      "disabled": false,
+                      "description": "Start date (YYYY-MM-DD)"
+                    },
+                    {
+                      "key": "end_date",
+                      "value": "2025-12-31",
+                      "disabled": false,
+                      "description": "End date (YYYY-MM-DD)"
+                    }
+                  ]
+                },
+                "description": "Get aggregate variance analysis comparing Blueprint Estimates vs Actual Costs across all jobs. Only includes jobs that have blueprint estimates attached."
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"period\": {\n    \"start_date\": \"2025-01-01\",\n    \"end_date\": \"2025-12-31\"\n  },\n  \"summary\": {\n    \"total_invoices\": 45,\n    \"total_revenue\": 150000,\n    \"total_estimated_cost\": 80000,\n    \"total_actual_cost\": 82000,\n    \"net_cost_variance\": 2000,\n    \"avg_variance_percent\": 2.5,\n    \"jobs_with_estimates\": 20,\n    \"jobs_under_budget\": 12,\n    \"jobs_over_budget\": 5,\n    \"jobs_on_budget\": 3\n  },\n  \"performance_status\": \"over_budget\",\n  \"message\": \"Tracking 2000.00 over budget across 20 estimated jobs.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Invoice Profit Breakdown",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{PROJECT_URL}}/functions/v1/get-invoice-profit-breakdown",
+              "host": [
+                "{{PROJECT_URL}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "get-invoice-profit-breakdown"
+              ],
+              "query": [
+                {
+                  "key": "invoice_id",
+                  "value": "UUID_HERE",
+                  "disabled": false,
+                  "description": "Invoice ID (required)"
+                }
+              ]
+            },
+            "description": "Get detailed profit breakdown for a specific invoice. Shows costs from linked transactions, blueprint estimates (if any), and variance analysis."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{ACCESS_TOKEN}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{PROJECT_URL}}/functions/v1/get-invoice-profit-breakdown",
+                  "host": [
+                    "{{PROJECT_URL}}"
+                  ],
+                  "path": [
+                    "functions",
+                    "v1",
+                    "get-invoice-profit-breakdown"
+                  ],
+                  "query": [
+                    {
+                      "key": "invoice_id",
+                      "value": "UUID_HERE",
+                      "disabled": false,
+                      "description": "Invoice ID (required)"
+                    }
+                  ]
+                },
+                "description": "Get detailed profit breakdown for a specific invoice. Shows costs from linked transactions, blueprint estimates (if any), and variance analysis."
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"invoice\": {\n    \"id\": \"uuid\",\n    \"invoice_number\": \"INV-001\",\n    \"client\": \"ABC Corp\",\n    \"amount\": 5000\n  },\n  \"blueprints\": [\n    {\n      \"id\": \"bp-1\",\n      \"name\": \"Kitchen Standard\",\n      \"type\": \"service\"\n    }\n  ],\n  \"costs\": {\n    \"from_transactions\": {\n      \"total\": 3200,\n      \"transaction_count\": 5\n    },\n    \"estimated\": {\n      \"materials\": 1500,\n      \"labor\": 1200,\n      \"overhead\": 300,\n      \"total\": 3000\n    },\n    \"actual\": {\n      \"materials\": 1600,\n      \"labor\": 1300,\n      \"overhead\": 300,\n      \"total\": 3200\n    },\n    \"effective\": {\n      \"amount\": 3200,\n      \"source\": \"linked_transactions\"\n    },\n    \"variance\": {\n      \"materials\": 100,\n      \"labor\": 100,\n      \"overhead\": 0,\n      \"total\": 200\n    }\n  },\n  \"profit\": {\n    \"calculated\": 1800,\n    \"estimated\": 2000,\n    \"variance\": -200,\n    \"margin\": 36\n  },\n  \"linked_expenses\": [\n    {\n      \"id\": \"exp-1\",\n      \"amount\": 1600,\n      \"date\": \"2025-11-10\",\n      \"vendor\": \"Home Depot\",\n      \"category\": \"Materials\"\n    }\n  ],\n  \"data_sources\": {\n    \"has_linked_transactions\": true,\n    \"has_blueprints\": true,\n    \"has_manual_override\": false,\n    \"cost_source\": \"linked_transactions\"\n  },\n  \"data_quality\": {\n    \"message\": \"Costs calculated from linked transactions.\"\n  }\n}"
             }
           ]
         },
         {
           "name": "Get Profit Trends",
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [
               {
                 "key": "Authorization",
@@ -3981,24 +4169,29 @@
                 "functions",
                 "v1",
                 "get-profit-trends"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "monthly",
+                  "disabled": false,
+                  "description": "Period type: monthly, quarterly, yearly"
+                },
+                {
+                  "key": "months",
+                  "value": "12",
+                  "disabled": false,
+                  "description": "Number of months to analyze"
+                }
               ]
             },
-            "description": "Get profit trends over specified period.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"period\": \"month\",\n  \"months\": 12\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "description": "Get profit trends over time. Calculates from linked transactions. Includes growth rates between periods."
           },
           "response": [
             {
               "name": "Success Response",
               "originalRequest": {
-                "method": "POST",
+                "method": "GET",
                 "header": [
                   {
                     "key": "Authorization",
@@ -4018,18 +4211,23 @@
                     "functions",
                     "v1",
                     "get-profit-trends"
+                  ],
+                  "query": [
+                    {
+                      "key": "period",
+                      "value": "monthly",
+                      "disabled": false,
+                      "description": "Period type: monthly, quarterly, yearly"
+                    },
+                    {
+                      "key": "months",
+                      "value": "12",
+                      "disabled": false,
+                      "description": "Number of months to analyze"
+                    }
                   ]
                 },
-                "description": "Get profit trends over specified period.",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"period\": \"month\",\n  \"months\": 12\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
+                "description": "Get profit trends over time. Calculates from linked transactions. Includes growth rates between periods."
               },
               "status": "OK",
               "code": 200,
@@ -4039,14 +4237,14 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"trends\": [\n    {\n      \"period\": \"2025-01\",\n      \"profit\": 6000,\n      \"margin\": 40,\n      \"change_pct\": 5.5\n    }\n  ]\n}"
+              "body": "{\n  \"success\": true,\n  \"period_type\": \"monthly\",\n  \"months_analyzed\": 12,\n  \"trends\": [\n    {\n      \"period\": \"2025-01\",\n      \"revenue\": 15000,\n      \"expenses\": 9000,\n      \"job_costs\": 8500,\n      \"job_profit\": 6500,\n      \"net_profit\": 6000,\n      \"job_profit_margin\": 43.33,\n      \"invoice_count\": 5,\n      \"invoices_with_cost_data\": 4\n    }\n  ],\n  \"growth_rates\": [\n    {\n      \"period\": \"2025-02\",\n      \"revenue_growth\": 8.5,\n      \"job_profit_growth\": 12\n    }\n  ],\n  \"summary\": {\n    \"total_revenue\": 150000,\n    \"total_job_profit\": 65000,\n    \"trend_direction\": \"growing\",\n    \"total_invoices\": 45,\n    \"invoices_with_cost_data\": 40\n  },\n  \"data_quality\": {\n    \"message\": \"40 of 45 invoices have cost data for accurate trend analysis.\",\n    \"cost_data_coverage\": 88.89\n  }\n}"
             }
           ]
         },
         {
           "name": "Get Margin Analysis",
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [
               {
                 "key": "Authorization",
@@ -4066,24 +4264,35 @@
                 "functions",
                 "v1",
                 "get-margin-analysis"
+              ],
+              "query": [
+                {
+                  "key": "start_date",
+                  "value": "2025-01-01",
+                  "disabled": false,
+                  "description": "Start date (YYYY-MM-DD)"
+                },
+                {
+                  "key": "end_date",
+                  "value": "2025-12-31",
+                  "disabled": false,
+                  "description": "End date (YYYY-MM-DD)"
+                },
+                {
+                  "key": "min_margin",
+                  "value": "20",
+                  "disabled": false,
+                  "description": "Minimum margin threshold for alerts"
+                }
               ]
             },
-            "description": "Analyze margins by service type or other dimensions.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"group_by\": \"service_type\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "description": "Analyze profit margins by service type, blueprint, and identify low/high margin jobs. Uses linked transactions for cost calculation."
           },
           "response": [
             {
               "name": "Success Response",
               "originalRequest": {
-                "method": "POST",
+                "method": "GET",
                 "header": [
                   {
                     "key": "Authorization",
@@ -4103,18 +4312,29 @@
                     "functions",
                     "v1",
                     "get-margin-analysis"
+                  ],
+                  "query": [
+                    {
+                      "key": "start_date",
+                      "value": "2025-01-01",
+                      "disabled": false,
+                      "description": "Start date (YYYY-MM-DD)"
+                    },
+                    {
+                      "key": "end_date",
+                      "value": "2025-12-31",
+                      "disabled": false,
+                      "description": "End date (YYYY-MM-DD)"
+                    },
+                    {
+                      "key": "min_margin",
+                      "value": "20",
+                      "disabled": false,
+                      "description": "Minimum margin threshold for alerts"
+                    }
                   ]
                 },
-                "description": "Analyze margins by service type or other dimensions.",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"group_by\": \"service_type\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
+                "description": "Analyze profit margins by service type, blueprint, and identify low/high margin jobs. Uses linked transactions for cost calculation."
               },
               "status": "OK",
               "code": 200,
@@ -4124,14 +4344,14 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"analysis\": [\n    {\n      \"service_type\": \"Kitchen Remodel\",\n      \"avg_margin\": 42.5,\n      \"job_count\": 15,\n      \"best_margin\": 55,\n      \"worst_margin\": 25\n    }\n  ]\n}"
+              "body": "{\n  \"success\": true,\n  \"period\": {\n    \"start_date\": \"2025-01-01\",\n    \"end_date\": \"2025-12-31\"\n  },\n  \"by_service_type\": [\n    {\n      \"service_type\": \"Kitchen Remodel\",\n      \"job_count\": 15,\n      \"jobs_with_cost_data\": 14,\n      \"total_revenue\": 75000,\n      \"total_profit\": 28000,\n      \"average_margin\": 37.33,\n      \"median_margin\": 38\n    }\n  ],\n  \"by_blueprint_type\": [\n    {\n      \"blueprint_type\": \"service\",\n      \"usage_count\": 20,\n      \"average_margin\": 35.5\n    }\n  ],\n  \"low_margin_jobs\": [\n    {\n      \"invoice_id\": \"uuid\",\n      \"invoice_number\": \"INV-005\",\n      \"client\": \"XYZ Ltd\",\n      \"margin\": 15,\n      \"revenue\": 5000,\n      \"cost\": 4250,\n      \"has_cost_data\": true\n    }\n  ],\n  \"high_margin_jobs\": [\n    {\n      \"invoice_id\": \"uuid\",\n      \"invoice_number\": \"INV-012\",\n      \"client\": \"ABC Corp\",\n      \"margin\": 55,\n      \"revenue\": 8000,\n      \"cost\": 3600,\n      \"has_cost_data\": true\n    }\n  ],\n  \"summary\": {\n    \"total_jobs_analyzed\": 45,\n    \"jobs_with_cost_data\": 40,\n    \"jobs_without_cost_data\": 5,\n    \"average_margin\": 38.5,\n    \"median_margin\": 37,\n    \"jobs_below_threshold\": 3,\n    \"jobs_below_threshold_percent\": 7.5\n  },\n  \"data_quality\": {\n    \"message\": \"40 of 45 invoices have cost data. Margins for invoices without cost data assume 100% margin.\"\n  }\n}"
             }
           ]
         },
         {
           "name": "Get Margin Alerts",
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [
               {
                 "key": "Authorization",
@@ -4151,24 +4371,35 @@
                 "functions",
                 "v1",
                 "get-margin-alerts"
+              ],
+              "query": [
+                {
+                  "key": "margin_threshold",
+                  "value": "20",
+                  "disabled": false,
+                  "description": "Margin threshold for low-margin alerts (%)"
+                },
+                {
+                  "key": "cost_spike_threshold",
+                  "value": "25",
+                  "disabled": false,
+                  "description": "Cost variance threshold for spike alerts (%)"
+                },
+                {
+                  "key": "days_back",
+                  "value": "30",
+                  "disabled": false,
+                  "description": "Days to analyze"
+                }
               ]
             },
-            "description": "Get invoices with margins below threshold.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"threshold\": 20\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "description": "Get proactive alerts for low-margin jobs, negative profit, cost spikes vs estimates, and invoices missing cost data."
           },
           "response": [
             {
               "name": "Success Response",
               "originalRequest": {
-                "method": "POST",
+                "method": "GET",
                 "header": [
                   {
                     "key": "Authorization",
@@ -4188,18 +4419,29 @@
                     "functions",
                     "v1",
                     "get-margin-alerts"
+                  ],
+                  "query": [
+                    {
+                      "key": "margin_threshold",
+                      "value": "20",
+                      "disabled": false,
+                      "description": "Margin threshold for low-margin alerts (%)"
+                    },
+                    {
+                      "key": "cost_spike_threshold",
+                      "value": "25",
+                      "disabled": false,
+                      "description": "Cost variance threshold for spike alerts (%)"
+                    },
+                    {
+                      "key": "days_back",
+                      "value": "30",
+                      "disabled": false,
+                      "description": "Days to analyze"
+                    }
                   ]
                 },
-                "description": "Get invoices with margins below threshold.",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"threshold\": 20\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
+                "description": "Get proactive alerts for low-margin jobs, negative profit, cost spikes vs estimates, and invoices missing cost data."
               },
               "status": "OK",
               "code": 200,
@@ -4209,14 +4451,121 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"alerts\": [\n    {\n      \"invoice_id\": \"inv-1\",\n      \"invoice_number\": \"INV-001\",\n      \"client\": \"ABC Corp\",\n      \"margin\": 15.5,\n      \"threshold\": 20,\n      \"shortfall\": 4.5\n    }\n  ],\n  \"total_alerts\": 3\n}"
+              "body": "{\n  \"success\": true,\n  \"alert_settings\": {\n    \"margin_threshold\": 20,\n    \"cost_spike_threshold\": 25,\n    \"days_analyzed\": 30\n  },\n  \"summary\": {\n    \"total_alerts\": 5,\n    \"low_margin_jobs_count\": 2,\n    \"negative_jobs_count\": 1,\n    \"cost_spikes_count\": 2,\n    \"underperforming_blueprints_count\": 0,\n    \"total_revenue_lost\": 1500,\n    \"invoices_analyzed\": 15,\n    \"invoices_with_cost_data\": 12\n  },\n  \"alerts\": {\n    \"low_margin_jobs\": [\n      {\n        \"invoice_id\": \"uuid\",\n        \"invoice_number\": \"INV-001\",\n        \"client\": \"ABC Corp\",\n        \"margin\": 15.5,\n        \"revenue\": 5000,\n        \"cost\": 4225\n      }\n    ],\n    \"negative_profit_jobs\": [\n      {\n        \"invoice_id\": \"uuid\",\n        \"invoice_number\": \"INV-008\",\n        \"client\": \"XYZ Ltd\",\n        \"revenue\": 3000,\n        \"cost\": 3500,\n        \"loss\": 500\n      }\n    ],\n    \"cost_spikes\": [\n      {\n        \"invoice_id\": \"uuid\",\n        \"invoice_number\": \"INV-003\",\n        \"estimated_cost\": 2000,\n        \"actual_cost\": 2600,\n        \"variance_percent\": 30\n      }\n    ],\n    \"underperforming_blueprints\": [],\n    \"declining_margin_trend\": null,\n    \"missing_cost_data\": [\n      {\n        \"invoice_id\": \"uuid\",\n        \"invoice_number\": \"INV-010\",\n        \"client\": \"DEF Inc\",\n        \"revenue\": 4000,\n        \"message\": \"No cost data. Link transactions to track profit.\"\n      }\n    ]\n  },\n  \"recommendations\": [\n    \"⚠️ You have jobs losing money. Review pricing strategy immediately.\",\n    \"📊 Multiple low-margin jobs detected. Consider raising prices or reducing costs.\"\n  ],\n  \"data_quality\": {\n    \"message\": \"12 of 15 invoices have cost data. Alerts may be incomplete.\",\n    \"cost_data_coverage\": 80\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Blueprint Variance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{PROJECT_URL}}/functions/v1/get-blueprint-variance",
+              "host": [
+                "{{PROJECT_URL}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "get-blueprint-variance"
+              ],
+              "query": [
+                {
+                  "key": "blueprint_id",
+                  "value": "UUID_HERE",
+                  "disabled": true,
+                  "description": "Optional: Filter by specific blueprint"
+                },
+                {
+                  "key": "start_date",
+                  "value": "2025-01-01",
+                  "disabled": true,
+                  "description": "Start date filter"
+                },
+                {
+                  "key": "end_date",
+                  "value": "2025-12-31",
+                  "disabled": true,
+                  "description": "End date filter"
+                }
+              ]
+            },
+            "description": "Analyze variance between blueprint estimates and actual costs. Shows per-job and aggregate variance."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{ACCESS_TOKEN}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{PROJECT_URL}}/functions/v1/get-blueprint-variance",
+                  "host": [
+                    "{{PROJECT_URL}}"
+                  ],
+                  "path": [
+                    "functions",
+                    "v1",
+                    "get-blueprint-variance"
+                  ],
+                  "query": [
+                    {
+                      "key": "blueprint_id",
+                      "value": "UUID_HERE",
+                      "disabled": true,
+                      "description": "Optional: Filter by specific blueprint"
+                    },
+                    {
+                      "key": "start_date",
+                      "value": "2025-01-01",
+                      "disabled": true,
+                      "description": "Start date filter"
+                    },
+                    {
+                      "key": "end_date",
+                      "value": "2025-12-31",
+                      "disabled": true,
+                      "description": "End date filter"
+                    }
+                  ]
+                },
+                "description": "Analyze variance between blueprint estimates and actual costs. Shows per-job and aggregate variance."
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"variances\": [\n    {\n      \"usage_id\": \"uuid\",\n      \"blueprint_id\": \"bp-uuid\",\n      \"blueprint_name\": \"Kitchen Standard\",\n      \"completed_date\": \"2025-11-15\",\n      \"estimated\": {\n        \"materials\": 2000,\n        \"labor\": 1500,\n        \"total_cost\": 3500,\n        \"profit\": 3500\n      },\n      \"actual\": {\n        \"materials\": 2200,\n        \"labor\": 1600,\n        \"total_cost\": 3800,\n        \"profit\": 3200\n      },\n      \"variance\": {\n        \"materials\": 200,\n        \"labor\": 100,\n        \"total_cost\": 300,\n        \"profit\": -300\n      },\n      \"variance_percentage\": {\n        \"total_cost\": 8.57,\n        \"profit\": -8.57\n      },\n      \"performance\": \"over_budget\"\n    }\n  ],\n  \"summary\": {\n    \"total_jobs\": 12,\n    \"avg_variances\": {\n      \"materials\": 150,\n      \"labor\": 80,\n      \"total\": 230\n    },\n    \"performance\": {\n      \"over_budget\": 5,\n      \"under_budget\": 4,\n      \"on_budget\": 3\n    }\n  }\n}"
             }
           ]
         },
         {
           "name": "Get Vendor Price Changes",
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [
               {
                 "key": "Authorization",
@@ -4236,24 +4585,23 @@
                 "functions",
                 "v1",
                 "get-vendor-price-changes"
+              ],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "90",
+                  "disabled": false,
+                  "description": "Days to analyze"
+                }
               ]
             },
-            "description": "Track vendor price changes over time.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"days\": 90\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "description": "Track vendor price changes over time to identify cost increases."
           },
           "response": [
             {
               "name": "Success Response",
               "originalRequest": {
-                "method": "POST",
+                "method": "GET",
                 "header": [
                   {
                     "key": "Authorization",
@@ -4273,18 +4621,17 @@
                     "functions",
                     "v1",
                     "get-vendor-price-changes"
+                  ],
+                  "query": [
+                    {
+                      "key": "days",
+                      "value": "90",
+                      "disabled": false,
+                      "description": "Days to analyze"
+                    }
                   ]
                 },
-                "description": "Track vendor price changes over time.",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"days\": 90\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
+                "description": "Track vendor price changes over time to identify cost increases."
               },
               "status": "OK",
               "code": 200,
@@ -6770,7 +7117,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"transactions\": [\n    {\n      \"id\": \"tx-uuid\",\n      \"transaction_id\": \"plaid_tx_123\",\n      \"date\": \"2025-12-01\",\n      \"amount\": -125.5,\n      \"name\": \"HOME DEPOT #1234\",\n      \"merchant_name\": \"Home Depot\",\n      \"pending\": false,\n      \"account\": {\n        \"id\": \"acc-uuid\",\n        \"name\": \"Business Checking\",\n        \"mask\": \"1234\",\n        \"institution\": \"Chase\"\n      }\n    }\n  ],\n  \"pagination\": {\n    \"total\": 45,\n    \"limit\": 50,\n    \"offset\": 0,\n    \"has_more\": false\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"transactions\": [\n    {\n      \"id\": \"tx-uuid-1\",\n      \"transaction_id\": \"plaid_tx_123\",\n      \"date\": \"2025-12-01\",\n      \"amount\": -125.5,\n      \"name\": \"HOME DEPOT #1234\",\n      \"merchant_name\": \"Home Depot\",\n      \"pending\": false,\n      \"account\": {\n        \"id\": \"acc-uuid\",\n        \"name\": \"Business Checking\",\n        \"mask\": \"1234\",\n        \"institution\": \"Chase\"\n      }\n    },\n    {\n      \"id\": \"tx-uuid-2\",\n      \"transaction_id\": \"plaid_tx_456\",\n      \"date\": \"2025-12-02\",\n      \"amount\": -89.99,\n      \"name\": \"LOWES #5678\",\n      \"merchant_name\": \"Lowes\",\n      \"pending\": false,\n      \"account\": {\n        \"id\": \"acc-uuid\",\n        \"name\": \"Business Checking\",\n        \"mask\": \"1234\",\n        \"institution\": \"Chase\"\n      }\n    }\n  ],\n  \"pagination\": {\n    \"total\": 45,\n    \"limit\": 50,\n    \"offset\": 0,\n    \"has_more\": false\n  }\n}"
             }
           ]
         },
@@ -6837,7 +7184,7 @@
                 }
               ]
             },
-            "description": "List categorized transactions with filters."
+            "description": "List categorized transactions. IMPORTANT: Use 'transaction.id' (e.g. tx-uuid-1) for categorize/uncategorize endpoints, NOT 'categorization_id'."
           },
           "response": [
             {
@@ -6903,7 +7250,7 @@
                     }
                   ]
                 },
-                "description": "List categorized transactions with filters."
+                "description": "List categorized transactions. IMPORTANT: Use 'transaction.id' (e.g. tx-uuid-1) for categorize/uncategorize endpoints, NOT 'categorization_id'."
               },
               "status": "OK",
               "code": 200,
@@ -6913,50 +7260,147 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"transactions\": [\n    {\n      \"categorization_id\": \"cat-link-uuid\",\n      \"method\": \"rule\",\n      \"confidence\": 0.95,\n      \"is_user_override\": false,\n      \"categorized_at\": \"2025-12-05T10:00:00Z\",\n      \"category\": {\n        \"id\": \"cat-uuid\",\n        \"name\": \"Materials\",\n        \"color\": \"#4CAF50\",\n        \"icon\": \"package\"\n      },\n      \"rule\": {\n        \"id\": \"rule-uuid\",\n        \"match_value\": \"home depot\",\n        \"rule_type\": \"vendor_contains\"\n      },\n      \"transaction\": {\n        \"id\": \"tx-uuid\",\n        \"date\": \"2025-12-01\",\n        \"amount\": -150,\n        \"name\": \"Home Depot\",\n        \"merchant_name\": \"Home Depot\",\n        \"pending\": false\n      }\n    }\n  ],\n  \"pagination\": {\n    \"total\": 120,\n    \"limit\": 50,\n    \"offset\": 0,\n    \"has_more\": true\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"transactions\": [\n    {\n      \"categorization_id\": \"cat-link-uuid\",\n      \"method\": \"rule\",\n      \"confidence\": 0.95,\n      \"is_user_override\": false,\n      \"categorized_at\": \"2025-12-05T10:00:00Z\",\n      \"category\": {\n        \"id\": \"cat-uuid\",\n        \"name\": \"Materials\",\n        \"color\": \"#4CAF50\",\n        \"icon\": \"package\"\n      },\n      \"rule\": {\n        \"id\": \"rule-uuid\",\n        \"match_value\": \"home depot\",\n        \"rule_type\": \"vendor_contains\"\n      },\n      \"transaction\": {\n        \"id\": \"tx-uuid-1\",\n        \"transaction_id\": \"plaid_tx_123\",\n        \"date\": \"2025-12-01\",\n        \"amount\": -150,\n        \"name\": \"Home Depot\",\n        \"merchant_name\": \"Home Depot\",\n        \"pending\": false\n      }\n    }\n  ],\n  \"pagination\": {\n    \"total\": 120,\n    \"limit\": 50,\n    \"offset\": 0,\n    \"has_more\": true\n  }\n}"
             }
           ]
         },
         {
-          "name": "Categorize Transaction",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{ACCESS_TOKEN}}"
+          "name": "Manual Categorization",
+          "item": [
+            {
+              "name": "Categorize Transaction (Manual)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{ACCESS_TOKEN}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{PROJECT_URL}}/functions/v1/categorize-transaction",
+                  "host": [
+                    "{{PROJECT_URL}}"
+                  ],
+                  "path": [
+                    "functions",
+                    "v1",
+                    "categorize-transaction"
+                  ]
+                },
+                "description": "Assign/change category for a transaction. Works for both NEW and ALREADY CATEGORIZED transactions (no need to uncategorize first). Use 'transaction.id' from get-categorized-transactions.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"transaction_id\": \"tx-uuid-1\",\n  \"category_id\": \"CATEGORY_UUID\",\n  \"create_rule\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
               },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{PROJECT_URL}}/functions/v1/categorize-transaction",
-              "host": [
-                "{{PROJECT_URL}}"
-              ],
-              "path": [
-                "functions",
-                "v1",
-                "categorize-transaction"
+              "response": [
+                {
+                  "name": "Success Response",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{ACCESS_TOKEN}}"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{PROJECT_URL}}/functions/v1/categorize-transaction",
+                      "host": [
+                        "{{PROJECT_URL}}"
+                      ],
+                      "path": [
+                        "functions",
+                        "v1",
+                        "categorize-transaction"
+                      ]
+                    },
+                    "description": "Assign/change category for a transaction. Works for both NEW and ALREADY CATEGORIZED transactions (no need to uncategorize first). Use 'transaction.id' from get-categorized-transactions.",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"transaction_id\": \"tx-uuid-1\",\n  \"category_id\": \"CATEGORY_UUID\",\n  \"create_rule\": false\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": true,\n  \"categorization\": {\n    \"id\": \"cat-link-uuid\",\n    \"transaction_id\": \"tx-uuid-1\",\n    \"category_id\": \"CATEGORY_UUID\",\n    \"method\": \"manual\",\n    \"confidence\": 1,\n    \"is_user_override\": false\n  },\n  \"rule_created\": false,\n  \"rule\": null\n}"
+                },
+                {
+                  "name": "Override Previous Category",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{ACCESS_TOKEN}}"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{PROJECT_URL}}/functions/v1/categorize-transaction",
+                      "host": [
+                        "{{PROJECT_URL}}"
+                      ],
+                      "path": [
+                        "functions",
+                        "v1",
+                        "categorize-transaction"
+                      ]
+                    },
+                    "description": "Assign/change category for a transaction. Works for both NEW and ALREADY CATEGORIZED transactions (no need to uncategorize first). Use 'transaction.id' from get-categorized-transactions.",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"transaction_id\": \"tx-uuid-1\",\n  \"category_id\": \"CATEGORY_UUID\",\n  \"create_rule\": false\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": true,\n  \"categorization\": {\n    \"id\": \"cat-link-uuid\",\n    \"transaction_id\": \"tx-uuid-1\",\n    \"category_id\": \"NEW_CATEGORY_UUID\",\n    \"method\": \"manual\",\n    \"confidence\": 1,\n    \"is_user_override\": true,\n    \"previous_category_id\": \"OLD_CATEGORY_UUID\"\n  },\n  \"rule_created\": false\n}"
+                }
               ]
             },
-            "description": "Manually assign category to a transaction. Set create_rule=true to auto-create a rule based on merchant.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"transaction_id\": \"TX_UUID\",\n  \"category_id\": \"CATEGORY_UUID\",\n  \"create_rule\": false\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "response": [
             {
-              "name": "Success Response",
-              "originalRequest": {
+              "name": "Categorize & Create Rule",
+              "request": {
                 "method": "POST",
                 "header": [
                   {
@@ -6979,10 +7423,10 @@
                     "categorize-transaction"
                   ]
                 },
-                "description": "Manually assign category to a transaction. Set create_rule=true to auto-create a rule based on merchant.",
+                "description": "Manually assign category and create a rule. Use the 'id' field from get-uncategorized-transactions.",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"transaction_id\": \"TX_UUID\",\n  \"category_id\": \"CATEGORY_UUID\",\n  \"create_rule\": false\n}",
+                  "raw": "{\n  \"transaction_id\": \"tx-uuid-1\",\n  \"category_id\": \"CATEGORY_UUID\",\n  \"create_rule\": true\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -6990,107 +7434,54 @@
                   }
                 }
               },
-              "status": "OK",
-              "code": 200,
-              "header": [
+              "response": [
                 {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"success\": true,\n  \"categorization\": {\n    \"id\": \"cat-link-uuid\",\n    \"transaction_id\": \"TX_UUID\",\n    \"category_id\": \"CATEGORY_UUID\",\n    \"method\": \"manual\",\n    \"confidence\": 1,\n    \"is_user_override\": false\n  },\n  \"rule_created\": false,\n  \"rule\": null\n}"
-            },
-            {
-              "name": "With Rule Creation",
-              "originalRequest": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{ACCESS_TOKEN}}"
+                  "name": "Success Response",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{ACCESS_TOKEN}}"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{PROJECT_URL}}/functions/v1/categorize-transaction",
+                      "host": [
+                        "{{PROJECT_URL}}"
+                      ],
+                      "path": [
+                        "functions",
+                        "v1",
+                        "categorize-transaction"
+                      ]
+                    },
+                    "description": "Manually assign category and create a rule. Use the 'id' field from get-uncategorized-transactions.",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"transaction_id\": \"tx-uuid-1\",\n  \"category_id\": \"CATEGORY_UUID\",\n  \"create_rule\": true\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
                   },
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{PROJECT_URL}}/functions/v1/categorize-transaction",
-                  "host": [
-                    "{{PROJECT_URL}}"
-                  ],
-                  "path": [
-                    "functions",
-                    "v1",
-                    "categorize-transaction"
-                  ]
-                },
-                "description": "Manually assign category to a transaction. Set create_rule=true to auto-create a rule based on merchant.",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"transaction_id\": \"TX_UUID\",\n  \"category_id\": \"CATEGORY_UUID\",\n  \"create_rule\": false\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
+                  "status": "OK",
+                  "code": 200,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
                     }
-                  }
-                }
-              },
-              "status": "OK",
-              "code": 200,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"success\": true,\n  \"categorization\": {\n    \"id\": \"cat-link-uuid\",\n    \"transaction_id\": \"TX_UUID\",\n    \"category_id\": \"CATEGORY_UUID\",\n    \"method\": \"manual\",\n    \"confidence\": 1\n  },\n  \"rule_created\": true,\n  \"rule\": {\n    \"id\": \"new-rule-uuid\",\n    \"rule_type\": \"vendor_contains\",\n    \"match_value\": \"home depot\",\n    \"category_id\": \"CATEGORY_UUID\"\n  }\n}"
-            },
-            {
-              "name": "Override Previous Category",
-              "originalRequest": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{ACCESS_TOKEN}}"
-                  },
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{PROJECT_URL}}/functions/v1/categorize-transaction",
-                  "host": [
-                    "{{PROJECT_URL}}"
                   ],
-                  "path": [
-                    "functions",
-                    "v1",
-                    "categorize-transaction"
-                  ]
-                },
-                "description": "Manually assign category to a transaction. Set create_rule=true to auto-create a rule based on merchant.",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"transaction_id\": \"TX_UUID\",\n  \"category_id\": \"CATEGORY_UUID\",\n  \"create_rule\": false\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
+                  "body": "{\n  \"success\": true,\n  \"categorization\": {\n    \"id\": \"cat-link-uuid\",\n    \"transaction_id\": \"tx-uuid-1\",\n    \"category_id\": \"CATEGORY_UUID\",\n    \"method\": \"manual\",\n    \"confidence\": 1\n  },\n  \"rule_created\": true,\n  \"rule\": {\n    \"id\": \"new-rule-uuid\",\n    \"rule_type\": \"vendor_contains\",\n    \"match_value\": \"home depot\",\n    \"category_id\": \"CATEGORY_UUID\"\n  }\n}"
                 }
-              },
-              "status": "OK",
-              "code": 200,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"success\": true,\n  \"categorization\": {\n    \"id\": \"cat-link-uuid\",\n    \"transaction_id\": \"TX_UUID\",\n    \"category_id\": \"NEW_CATEGORY_UUID\",\n    \"method\": \"manual\",\n    \"confidence\": 1,\n    \"is_user_override\": true,\n    \"previous_category_id\": \"OLD_CATEGORY_UUID\"\n  },\n  \"rule_created\": false\n}"
+              ]
             }
           ]
         },
@@ -7119,10 +7510,10 @@
                 "uncategorize-transaction"
               ]
             },
-            "description": "Remove categorization from a transaction.",
+            "description": "Remove categorization from a transaction. Use the 'id' field from transactions.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"transaction_id\": \"TX_UUID\"\n}",
+              "raw": "{\n  \"transaction_id\": \"tx-uuid-1\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -7156,10 +7547,10 @@
                     "uncategorize-transaction"
                   ]
                 },
-                "description": "Remove categorization from a transaction.",
+                "description": "Remove categorization from a transaction. Use the 'id' field from transactions.",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"transaction_id\": \"TX_UUID\"\n}",
+                  "raw": "{\n  \"transaction_id\": \"tx-uuid-1\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -7175,7 +7566,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Transaction uncategorized successfully\",\n  \"removed_categorization\": {\n    \"transaction_id\": \"TX_UUID\",\n    \"transaction_name\": \"Home Depot\",\n    \"previous_category\": \"Materials\",\n    \"previous_method\": \"manual\"\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"Transaction uncategorized successfully\",\n  \"removed_categorization\": {\n    \"transaction_id\": \"tx-uuid-1\",\n    \"transaction_name\": \"Home Depot\",\n    \"previous_category\": \"Materials\",\n    \"previous_method\": \"manual\"\n  }\n}"
             }
           ]
         },

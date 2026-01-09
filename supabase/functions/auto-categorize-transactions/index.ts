@@ -167,7 +167,7 @@ serve(async (req) => {
                 if (txIndex >= 0 && txIndex < batch.length) {
                   const transaction = batch[txIndex];
                   const matchedCategory = categories.find(c => c.name.toLowerCase() === result.category.toLowerCase());
-                  if (matchedCategory && result.confidence >= 0.7) {
+                  if (matchedCategory && result.confidence >= 0.5) {
                     categorizations.push({
                       transaction_id: transaction.id,
                       category_id: matchedCategory.id,
@@ -193,6 +193,27 @@ serve(async (req) => {
       const { error: categorizationError } = await supabaseClient.from("transaction_categorizations").insert(categorizations);
       if (categorizationError) console.error("Categorization error:", categorizationError);
       else categorizedCount = categorizations.length;
+
+      // Also update the legacy 'category' column on transactions table for backward compatibility
+      // Get category names for the categorized transactions
+      const categoryIds = [...new Set(categorizations.map(c => c.category_id))];
+      const { data: categories } = await supabaseClient
+        .from("expense_categories")
+        .select("id, name")
+        .in("id", categoryIds);
+
+      const categoryNameMap = new Map(categories?.map(c => [c.id, c.name]) || []);
+
+      // Update each transaction's category column
+      for (const cat of categorizations) {
+        const categoryName = categoryNameMap.get(cat.category_id);
+        if (categoryName) {
+          await supabaseClient
+            .from("transactions")
+            .update({ category: categoryName })
+            .eq("id", cat.transaction_id);
+        }
+      }
 
       // Update rule usage counts
       for (const [ruleId, count] of ruleUpdates.entries()) {
