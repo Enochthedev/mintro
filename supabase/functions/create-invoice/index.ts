@@ -345,11 +345,22 @@ Deno.serve(async (req) => {
     const totalActualCost = blueprintTotalCost + transactionCosts + lineItemCosts;
     const actualProfit = totalActualCost > 0 ? ((Number(finalAmount) || 0) - totalActualCost) : null;
 
+    // Determine cost data source for frontend display
+    let costDataSource = null;
+    if (transactionCosts > 0) {
+      costDataSource = "transaction_linked"; // Most reliable - actual bank data
+    } else if (blueprintTotalCost > 0) {
+      costDataSource = "blueprint_linked"; // Good - user's estimates
+    } else if (lineItemCosts > 0) {
+      costDataSource = "user_verified"; // User entered line items
+    }
+
     // Update invoice with cost totals if there are any costs to track
     if (totalActualCost > 0 || blueprintTotalCost > 0) {
       await supabaseClient.from("invoices").update({
         total_actual_cost: totalActualCost > 0 ? totalActualCost : null,
-        actual_profit: actualProfit
+        actual_profit: actualProfit,
+        cost_data_source: costDataSource,
       }).eq("id", invoice.id);
     }
     const { data: completeInvoice } = await supabaseClient.from("invoices").select(`

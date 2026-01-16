@@ -301,6 +301,18 @@
                   "description": "Filter by cost tracking"
                 },
                 {
+                  "key": "quickbooks_only",
+                  "value": "true",
+                  "disabled": true,
+                  "description": "Only show invoices synced from QuickBooks"
+                },
+                {
+                  "key": "cost_data_source",
+                  "value": "estimated",
+                  "disabled": true,
+                  "description": "Filter by cost data source (estimated, user_verified, blueprint_linked, transaction_linked)"
+                },
+                {
                   "key": "limit",
                   "value": "50",
                   "disabled": false,
@@ -314,7 +326,7 @@
                 }
               ]
             },
-            "description": "Retrieves a paginated list of invoices with optional filtering."
+            "description": "Retrieves a paginated list of invoices with optional filtering. Use quickbooks_only=true to see only QB-synced invoices. cost_data_source indicates reliability: 'estimated' (auto-guessed), 'user_verified' (reviewed), 'blueprint_linked', 'transaction_linked'."
           },
           "response": [
             {
@@ -379,6 +391,18 @@
                       "description": "Filter by cost tracking"
                     },
                     {
+                      "key": "quickbooks_only",
+                      "value": "true",
+                      "disabled": true,
+                      "description": "Only show invoices synced from QuickBooks"
+                    },
+                    {
+                      "key": "cost_data_source",
+                      "value": "estimated",
+                      "disabled": true,
+                      "description": "Filter by cost data source (estimated, user_verified, blueprint_linked, transaction_linked)"
+                    },
+                    {
                       "key": "limit",
                       "value": "50",
                       "disabled": false,
@@ -392,7 +416,7 @@
                     }
                   ]
                 },
-                "description": "Retrieves a paginated list of invoices with optional filtering."
+                "description": "Retrieves a paginated list of invoices with optional filtering. Use quickbooks_only=true to see only QB-synced invoices. cost_data_source indicates reliability: 'estimated' (auto-guessed), 'user_verified' (reviewed), 'blueprint_linked', 'transaction_linked'."
               },
               "status": "OK",
               "code": 200,
@@ -402,7 +426,74 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"invoices\": [\n    {\n      \"id\": \"uuid\",\n      \"invoice\": \"INV-001\",\n      \"client\": \"John Smith Construction\",\n      \"amount\": 5000,\n      \"status\": \"paid\",\n      \"total_actual_cost\": 3200,\n      \"actual_profit\": 1800,\n      \"invoice_date\": \"2025-11-15\",\n      \"due_date\": \"2025-12-15\",\n      \"service_type\": \"Kitchen Remodel\"\n    }\n  ],\n  \"pagination\": {\n    \"total\": 45,\n    \"limit\": 50,\n    \"offset\": 0,\n    \"has_more\": false\n  },\n  \"summary\": {\n    \"total_invoices\": 45,\n    \"total_revenue\": 125000,\n    \"total_actual_cost\": 78000,\n    \"total_actual_profit\": 47000,\n    \"average_profit_margin\": 37.6\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"invoices\": [\n    {\n      \"id\": \"uuid\",\n      \"invoice\": \"INV-001\",\n      \"client\": \"John Smith Construction\",\n      \"amount\": 5000,\n      \"status\": \"paid\",\n      \"total_actual_cost\": 3200,\n      \"actual_profit\": 1800,\n      \"invoice_date\": \"2025-11-15\",\n      \"due_date\": \"2025-12-15\",\n      \"service_type\": \"Kitchen Remodel\",\n      \"cost_data_source\": \"user_verified\",\n      \"quickbooks_id\": null\n    }\n  ],\n  \"pagination\": {\n    \"total\": 45,\n    \"limit\": 50,\n    \"offset\": 0,\n    \"has_more\": false\n  },\n  \"summary\": {\n    \"total_invoices\": 45,\n    \"total_revenue\": 125000,\n    \"total_actual_cost\": 78000,\n    \"total_actual_profit\": 47000,\n    \"average_profit_margin\": 37.6\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "List QuickBooks Invoices Only",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{PROJECT_URL}}/functions/v1/list-invoices?quickbooks_only=true",
+              "host": [
+                "{{PROJECT_URL}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "list-invoices?quickbooks_only=true"
+              ]
+            },
+            "description": "Returns only invoices that were synced from QuickBooks. Includes billing_address, qb_doc_number, and cost_data_source fields."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{ACCESS_TOKEN}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{PROJECT_URL}}/functions/v1/list-invoices?quickbooks_only=true",
+                  "host": [
+                    "{{PROJECT_URL}}"
+                  ],
+                  "path": [
+                    "functions",
+                    "v1",
+                    "list-invoices?quickbooks_only=true"
+                  ]
+                },
+                "description": "Returns only invoices that were synced from QuickBooks. Includes billing_address, qb_doc_number, and cost_data_source fields."
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"invoices\": [\n    {\n      \"id\": \"uuid\",\n      \"invoice\": \"INV-042\",\n      \"client\": \"Amy's Bird Sanctuary\",\n      \"amount\": 239,\n      \"status\": \"paid\",\n      \"qb_doc_number\": \"1037\",\n      \"total_actual_cost\": 95.6,\n      \"actual_profit\": 143.4,\n      \"invoice_date\": \"2024-12-21\",\n      \"due_date\": \"2025-01-20\",\n      \"service_type\": \"Pest Control\",\n      \"billing_address\": \"4581 Finch St.\\\\nBayshore, CA 94326\",\n      \"cost_data_source\": \"estimated\",\n      \"quickbooks_id\": \"130\",\n      \"invoice_items\": [\n        {\n          \"description\": \"Pest Control\",\n          \"qty\": 3,\n          \"unit_price\": 35\n        }\n      ]\n    }\n  ],\n  \"pagination\": {\n    \"total\": 12,\n    \"limit\": 50,\n    \"offset\": 0,\n    \"has_more\": false\n  },\n  \"summary\": {\n    \"total_invoices\": 12,\n    \"total_revenue\": 8500\n  }\n}"
             }
           ]
         },
@@ -439,7 +530,7 @@
                 }
               ]
             },
-            "description": "Retrieves complete details for a specific invoice."
+            "description": "Retrieves complete details for a specific invoice including cost_data_source for UI display logic."
           },
           "response": [
             {
@@ -475,7 +566,7 @@
                     }
                   ]
                 },
-                "description": "Retrieves complete details for a specific invoice."
+                "description": "Retrieves complete details for a specific invoice including cost_data_source for UI display logic."
               },
               "status": "OK",
               "code": 200,
@@ -485,7 +576,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"invoice\": {\n    \"id\": \"uuid\",\n    \"invoice\": \"INV-001\",\n    \"client\": \"John Smith Construction\",\n    \"amount\": 5000,\n    \"status\": \"paid\",\n    \"total_actual_cost\": 3200,\n    \"actual_profit\": 1800,\n    \"invoice_date\": \"2025-11-15\",\n    \"due_date\": \"2025-12-15\",\n    \"invoice_items\": [\n      {\n        \"id\": \"item-1\",\n        \"description\": \"Labor - Kitchen Installation\",\n        \"qty\": 40,\n        \"unit_price\": 75,\n        \"total_price\": 3000\n      }\n    ],\n    \"transaction_job_allocations\": [\n      {\n        \"id\": \"alloc-1\",\n        \"allocation_amount\": 3200,\n        \"transactions\": {\n          \"id\": \"tx-1\",\n          \"name\": \"Home Depot\",\n          \"amount\": -3200\n        }\n      }\n    ],\n    \"profit_summary\": {\n      \"revenue\": 5000,\n      \"actual_cost\": 3200,\n      \"actual_profit\": 1800,\n      \"profit_margin\": 36\n    }\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"invoice\": {\n    \"id\": \"uuid\",\n    \"invoice\": \"INV-001\",\n    \"client\": \"John Smith Construction\",\n    \"amount\": 5000,\n    \"status\": \"paid\",\n    \"total_actual_cost\": 3200,\n    \"actual_profit\": 1800,\n    \"invoice_date\": \"2025-11-15\",\n    \"due_date\": \"2025-12-15\",\n    \"cost_data_source\": \"user_verified\",\n    \"billing_address\": \"123 Main St\\\\nAnytown, CA 90210\",\n    \"invoice_items\": [\n      {\n        \"id\": \"item-1\",\n        \"description\": \"Labor - Kitchen Installation\",\n        \"qty\": 40,\n        \"unit_price\": 75,\n        \"total_price\": 3000\n      }\n    ],\n    \"transaction_job_allocations\": [\n      {\n        \"id\": \"alloc-1\",\n        \"allocation_amount\": 3200,\n        \"transactions\": {\n          \"id\": \"tx-1\",\n          \"name\": \"Home Depot\",\n          \"amount\": -3200\n        }\n      }\n    ],\n    \"profit_summary\": {\n      \"revenue\": 5000,\n      \"actual_cost\": 3200,\n      \"actual_profit\": 1800,\n      \"profit_margin\": 36,\n      \"has_cost_override\": false\n    }\n  }\n}"
             }
           ]
         },
@@ -518,7 +609,7 @@
                     "create-invoice"
                   ]
                 },
-                "description": "Create a basic invoice and link transactions immediately for automatic cost tracking.",
+                "description": "Create a basic invoice and link transactions immediately for automatic cost tracking. Sets cost_data_source to 'transaction_linked'.",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"client\": \"John Smith Construction\",\n  \"amount\": 5000,\n  \"status\": \"draft\",\n  \"transaction_ids\": [\n    \"TX_ID_1\",\n    \"TX_ID_2\"\n  ],\n  \"due_date\": \"2025-12-15\",\n  \"service_type\": \"Kitchen Remodel\"\n}",
@@ -555,7 +646,7 @@
                         "create-invoice"
                       ]
                     },
-                    "description": "Create a basic invoice and link transactions immediately for automatic cost tracking.",
+                    "description": "Create a basic invoice and link transactions immediately for automatic cost tracking. Sets cost_data_source to 'transaction_linked'.",
                     "body": {
                       "mode": "raw",
                       "raw": "{\n  \"client\": \"John Smith Construction\",\n  \"amount\": 5000,\n  \"status\": \"draft\",\n  \"transaction_ids\": [\n    \"TX_ID_1\",\n    \"TX_ID_2\"\n  ],\n  \"due_date\": \"2025-12-15\",\n  \"service_type\": \"Kitchen Remodel\"\n}",
@@ -574,7 +665,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"success\": true,\n  \"message\": \"Invoice created successfully\",\n  \"invoice\": {\n    \"id\": \"new-uuid\",\n    \"invoice\": \"INV-001\",\n    \"client\": \"John Smith Construction\",\n    \"amount\": 5000,\n    \"status\": \"draft\",\n    \"total_actual_cost\": 3200,\n    \"actual_profit\": 1800\n  },\n  \"transactions_linked\": 2\n}"
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Invoice created successfully\",\n  \"invoice\": {\n    \"id\": \"new-uuid\",\n    \"invoice\": \"INV-001\",\n    \"client\": \"John Smith Construction\",\n    \"amount\": 5000,\n    \"status\": \"draft\",\n    \"total_actual_cost\": 3200,\n    \"actual_profit\": 1800,\n    \"cost_data_source\": \"transaction_linked\"\n  },\n  \"transactions_linked\": 2\n}"
                 }
               ]
             },
@@ -603,7 +694,7 @@
                     "create-invoice"
                   ]
                 },
-                "description": "Create invoice with blueprint - amount auto-calculated from blueprint's target sale price.",
+                "description": "Create invoice with blueprint - amount auto-calculated from blueprint's target sale price. Sets cost_data_source to 'blueprint_linked'.",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"client\": \"John Smith Construction\",\n  \"status\": \"draft\",\n  \"due_date\": \"2025-12-15\",\n  \"service_type\": \"Kitchen Remodel\",\n  \"blueprint_ids\": [\n    \"bp-kitchen-standard-123\"\n  ],\n  \"auto_calculate_from_blueprints\": true\n}",
@@ -640,7 +731,7 @@
                         "create-invoice"
                       ]
                     },
-                    "description": "Create invoice with blueprint - amount auto-calculated from blueprint's target sale price.",
+                    "description": "Create invoice with blueprint - amount auto-calculated from blueprint's target sale price. Sets cost_data_source to 'blueprint_linked'.",
                     "body": {
                       "mode": "raw",
                       "raw": "{\n  \"client\": \"John Smith Construction\",\n  \"status\": \"draft\",\n  \"due_date\": \"2025-12-15\",\n  \"service_type\": \"Kitchen Remodel\",\n  \"blueprint_ids\": [\n    \"bp-kitchen-standard-123\"\n  ],\n  \"auto_calculate_from_blueprints\": true\n}",
@@ -659,7 +750,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"success\": true,\n  \"message\": \"Invoice created successfully\",\n  \"invoice\": {\n    \"id\": \"new-uuid\",\n    \"invoice\": \"INV-002\",\n    \"client\": \"John Smith Construction\",\n    \"amount\": 7500,\n    \"status\": \"draft\"\n  },\n  \"blueprints_linked\": 1\n}"
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Invoice created successfully\",\n  \"invoice\": {\n    \"id\": \"new-uuid\",\n    \"invoice\": \"INV-002\",\n    \"client\": \"John Smith Construction\",\n    \"amount\": 7500,\n    \"status\": \"draft\",\n    \"cost_data_source\": \"blueprint_linked\"\n  },\n  \"blueprints_linked\": 1\n}"
                 }
               ]
             },
@@ -744,7 +835,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"success\": true,\n  \"message\": \"Invoice created successfully\",\n  \"invoice\": {\n    \"id\": \"new-uuid\",\n    \"invoice\": \"INV-003\",\n    \"client\": \"Sarah & Mike Wedding\",\n    \"amount\": 12500,\n    \"status\": \"draft\"\n  },\n  \"blueprints_linked\": 3\n}"
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Invoice created successfully\",\n  \"invoice\": {\n    \"id\": \"new-uuid\",\n    \"invoice\": \"INV-003\",\n    \"client\": \"Sarah & Mike Wedding\",\n    \"amount\": 12500,\n    \"status\": \"draft\",\n    \"cost_data_source\": \"blueprint_linked\"\n  },\n  \"blueprints_linked\": 3\n}"
                 }
               ]
             },
@@ -829,7 +920,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"success\": true,\n  \"message\": \"Invoice created successfully\",\n  \"invoice\": {\n    \"id\": \"new-uuid\",\n    \"invoice\": \"INV-004\",\n    \"client\": \"Custom Project Inc\",\n    \"amount\": 7500,\n    \"status\": \"draft\"\n  },\n  \"blueprints_linked\": 1\n}"
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Invoice created successfully\",\n  \"invoice\": {\n    \"id\": \"new-uuid\",\n    \"invoice\": \"INV-004\",\n    \"client\": \"Custom Project Inc\",\n    \"amount\": 7500,\n    \"status\": \"draft\",\n    \"cost_data_source\": \"blueprint_linked\"\n  },\n  \"blueprints_linked\": 1\n}"
                 }
               ]
             },
@@ -914,7 +1005,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"success\": true,\n  \"message\": \"Invoice created successfully\",\n  \"invoice\": {\n    \"id\": \"new-uuid\",\n    \"invoice\": \"INV-005\",\n    \"client\": \"John Smith Construction\",\n    \"amount\": 5000,\n    \"tags\": [\n      \"urgent\",\n      \"residential\"\n    ],\n    \"invoice_items\": [\n      {\n        \"id\": \"item-1\",\n        \"description\": \"Labor - Kitchen Installation\",\n        \"qty\": 40,\n        \"unit_price\": 75,\n        \"total_price\": 3000\n      }\n    ]\n  }\n}"
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Invoice created successfully\",\n  \"invoice\": {\n    \"id\": \"new-uuid\",\n    \"invoice\": \"INV-005\",\n    \"client\": \"John Smith Construction\",\n    \"amount\": 5000,\n    \"tags\": [\n      \"urgent\",\n      \"residential\"\n    ],\n    \"cost_data_source\": \"user_verified\",\n    \"invoice_items\": [\n      {\n        \"id\": \"item-1\",\n        \"description\": \"Labor - Kitchen Installation\",\n        \"qty\": 40,\n        \"unit_price\": 75,\n        \"total_price\": 3000\n      }\n    ]\n  }\n}"
                 }
               ]
             },
@@ -999,7 +1090,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"success\": true,\n  \"message\": \"Invoice created successfully\",\n  \"invoice\": {\n    \"id\": \"new-uuid\",\n    \"invoice\": \"INV-006\",\n    \"client\": \"Custom Project Client\",\n    \"amount\": 15000,\n    \"status\": \"draft\"\n  },\n  \"blueprints_linked\": 1,\n  \"blueprint_variance\": {\n    \"estimated_total\": 12000,\n    \"actual_total\": 10000,\n    \"variance\": -2000\n  }\n}"
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Invoice created successfully\",\n  \"invoice\": {\n    \"id\": \"new-uuid\",\n    \"invoice\": \"INV-006\",\n    \"client\": \"Custom Project Client\",\n    \"amount\": 15000,\n    \"status\": \"draft\",\n    \"cost_data_source\": \"blueprint_linked\"\n  },\n  \"blueprints_linked\": 1,\n  \"blueprint_variance\": {\n    \"estimated_total\": 12000,\n    \"actual_total\": 10000,\n    \"variance\": -2000\n  }\n}"
                 }
               ]
             },
@@ -1084,7 +1175,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"success\": true,\n  \"message\": \"Invoice created successfully\",\n  \"invoice\": {\n    \"id\": \"new-uuid\",\n    \"invoice\": \"INV-007\",\n    \"client\": \"ABC Corp\",\n    \"amount\": 5500,\n    \"status\": \"draft\",\n    \"total_actual_cost\": 3350,\n    \"actual_profit\": 2150\n  }\n}"
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Invoice created successfully\",\n  \"invoice\": {\n    \"id\": \"new-uuid\",\n    \"invoice\": \"INV-007\",\n    \"client\": \"ABC Corp\",\n    \"amount\": 5500,\n    \"status\": \"draft\",\n    \"total_actual_cost\": 3350,\n    \"actual_profit\": 2150,\n    \"cost_data_source\": \"user_verified\"\n  }\n}"
                 }
               ]
             }
@@ -1331,10 +1422,10 @@
                 "update-invoice-actuals"
               ]
             },
-            "description": "Manually update actual costs for an invoice. Automatically recalculates profit.",
+            "description": "Manually update actual costs for an invoice. Automatically recalculates profit and sets cost_data_source to 'user_verified'. Use this to verify estimated costs from QuickBooks.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"invoice_id\": \"INVOICE_ID\",\n  \"total_actual_cost\": 3200,\n  \"actual_materials_cost\": 2000,\n  \"actual_labor_cost\": 1200\n}",
+              "raw": "{\n  \"invoice_id\": \"INVOICE_ID\",\n  \"actual_materials_cost\": 2000,\n  \"actual_labor_cost\": 1200,\n  \"actual_overhead_cost\": 300,\n  \"cost_override_reason\": \"Verified from receipts\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1368,10 +1459,10 @@
                     "update-invoice-actuals"
                   ]
                 },
-                "description": "Manually update actual costs for an invoice. Automatically recalculates profit.",
+                "description": "Manually update actual costs for an invoice. Automatically recalculates profit and sets cost_data_source to 'user_verified'. Use this to verify estimated costs from QuickBooks.",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"invoice_id\": \"INVOICE_ID\",\n  \"total_actual_cost\": 3200,\n  \"actual_materials_cost\": 2000,\n  \"actual_labor_cost\": 1200\n}",
+                  "raw": "{\n  \"invoice_id\": \"INVOICE_ID\",\n  \"actual_materials_cost\": 2000,\n  \"actual_labor_cost\": 1200,\n  \"actual_overhead_cost\": 300,\n  \"cost_override_reason\": \"Verified from receipts\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1387,7 +1478,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Invoice actuals updated\",\n  \"invoice\": {\n    \"id\": \"INVOICE_ID\",\n    \"total_actual_cost\": 3200,\n    \"actual_profit\": 1800,\n    \"actual_materials_cost\": 2000,\n    \"actual_labor_cost\": 1200\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"Invoice costs updated successfully\",\n  \"invoice\": {\n    \"id\": \"INVOICE_ID\",\n    \"total_actual_cost\": 3500,\n    \"actual_profit\": 1500,\n    \"actual_materials_cost\": 2000,\n    \"actual_labor_cost\": 1200,\n    \"actual_overhead_cost\": 300,\n    \"cost_data_source\": \"user_verified\"\n  },\n  \"profit_breakdown\": {\n    \"revenue\": 5000,\n    \"costs\": {\n      \"materials\": 2000,\n      \"labor\": 1200,\n      \"overhead\": 300,\n      \"total\": 3500\n    },\n    \"profit\": 1500,\n    \"profit_margin\": \"30.00\"\n  }\n}"
             }
           ]
         },
@@ -3196,6 +3287,91 @@
                 }
               ],
               "body": "{\n  \"success\": true,\n  \"blueprint\": {\n    \"id\": \"BP_ID\",\n    \"name\": \"Standard Kitchen Remodel\"\n  },\n  \"variance\": {\n    \"materials\": {\n      \"estimated\": 2000,\n      \"actual_avg\": 2150,\n      \"variance_pct\": 7.5\n    },\n    \"labor\": {\n      \"estimated\": 1500,\n      \"actual_avg\": 1650,\n      \"variance_pct\": 10\n    }\n  },\n  \"usages_analyzed\": 12\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete All Blueprint Usage",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{PROJECT_URL}}/functions/v1/delete-all-blueprint-usage",
+              "host": [
+                "{{PROJECT_URL}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "delete-all-blueprint-usage"
+              ]
+            },
+            "description": "Delete all blueprint usage records. REQUIRES confirm_delete: true. Optionally filter by invoice_id or blueprint_id. WARNING: Destructive operation!",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"confirm_delete\": true,\n  \"invoice_id\": null,\n  \"blueprint_id\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{ACCESS_TOKEN}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{PROJECT_URL}}/functions/v1/delete-all-blueprint-usage",
+                  "host": [
+                    "{{PROJECT_URL}}"
+                  ],
+                  "path": [
+                    "functions",
+                    "v1",
+                    "delete-all-blueprint-usage"
+                  ]
+                },
+                "description": "Delete all blueprint usage records. REQUIRES confirm_delete: true. Optionally filter by invoice_id or blueprint_id. WARNING: Destructive operation!",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"confirm_delete\": true,\n  \"invoice_id\": null,\n  \"blueprint_id\": null\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Deleted 15 blueprint usage records\",\n  \"deleted_count\": 15,\n  \"deleted_summary\": {\n    \"unique_blueprints\": 5,\n    \"unique_invoices\": 8,\n    \"total_revenue\": 75000,\n    \"total_cost\": 48000,\n    \"total_profit\": 27000\n  },\n  \"filters_applied\": {\n    \"invoice_id\": null,\n    \"blueprint_id\": null\n  },\n  \"warning\": \"These records have been permanently deleted and cannot be recovered\"\n}"
             }
           ]
         }
@@ -5165,7 +5341,7 @@
     },
     {
       "name": "QuickBooks Integration",
-      "description": "QuickBooks Online integration for invoice syncing",
+      "description": "QuickBooks Online integration for invoice syncing. Synced invoices have cost_data_source='estimated' until verified.",
       "item": [
         {
           "name": "Get QuickBooks Auth URL",
@@ -5508,7 +5684,7 @@
           ]
         },
         {
-          "name": "Sync Invoices to QuickBooks",
+          "name": "Sync Chart of Accounts",
           "request": {
             "method": "POST",
             "header": [
@@ -5522,20 +5698,20 @@
               }
             ],
             "url": {
-              "raw": "{{PROJECT_URL}}/functions/v1/quickbooks-sync-invoices",
+              "raw": "{{PROJECT_URL}}/functions/v1/quickbooks-sync-chart-of-accounts",
               "host": [
                 "{{PROJECT_URL}}"
               ],
               "path": [
                 "functions",
                 "v1",
-                "quickbooks-sync-invoices"
+                "quickbooks-sync-chart-of-accounts"
               ]
             },
-            "description": "Sync invoices to QuickBooks.",
+            "description": "Sync QuickBooks Chart of Accounts for proper expense classification. CALL THIS FIRST after connecting QB! Maps QB AccountTypes (COGS→materials, Expense→labor/overhead, Income→revenue). Bank/CC/Loan/Equity accounts shown but EXCLUDED from cost calculations - can be mapped to Plaid banks.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"invoice_ids\": [\n    \"INV_ID_1\",\n    \"INV_ID_2\"\n  ],\n  \"sync_all_unpaid\": false\n}",
+              "raw": "{}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5559,20 +5735,20 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{PROJECT_URL}}/functions/v1/quickbooks-sync-invoices",
+                  "raw": "{{PROJECT_URL}}/functions/v1/quickbooks-sync-chart-of-accounts",
                   "host": [
                     "{{PROJECT_URL}}"
                   ],
                   "path": [
                     "functions",
                     "v1",
-                    "quickbooks-sync-invoices"
+                    "quickbooks-sync-chart-of-accounts"
                   ]
                 },
-                "description": "Sync invoices to QuickBooks.",
+                "description": "Sync QuickBooks Chart of Accounts for proper expense classification. CALL THIS FIRST after connecting QB! Maps QB AccountTypes (COGS→materials, Expense→labor/overhead, Income→revenue). Bank/CC/Loan/Equity accounts shown but EXCLUDED from cost calculations - can be mapped to Plaid banks.",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"invoice_ids\": [\n    \"INV_ID_1\",\n    \"INV_ID_2\"\n  ],\n  \"sync_all_unpaid\": false\n}",
+                  "raw": "{}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -5588,7 +5764,268 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"synced\": 2,\n  \"errors\": 0,\n  \"synced_invoices\": [\n    {\n      \"id\": \"INV_ID_1\",\n      \"qb_invoice_id\": \"qb-123\"\n    }\n  ]\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"Synced 45 accounts from QuickBooks\",\n  \"synced\": 45,\n  \"category_breakdown\": {\n    \"expense\": 12,\n    \"cogs\": 5,\n    \"revenue\": 8,\n    \"transfer\": 4,\n    \"exclude\": 10,\n    \"other\": 6\n  },\n  \"account_types_found\": {\n    \"Cost of Goods Sold\": 5,\n    \"Expense\": 10,\n    \"Other Expense\": 2,\n    \"Income\": 6,\n    \"Other Income\": 2,\n    \"Bank\": 3,\n    \"Credit Card\": 1,\n    \"Loan\": 2,\n    \"Equity\": 4,\n    \"Accounts Receivable\": 1,\n    \"Accounts Payable\": 1,\n    \"Other Current Asset\": 3,\n    \"Fixed Asset\": 5\n  },\n  \"excluded_from_costs\": {\n    \"bank_accounts\": [\n      \"Business Checking\",\n      \"Business Savings\",\n      \"Petty Cash\"\n    ],\n    \"credit_cards\": [\n      \"Business Credit Card\"\n    ],\n    \"loans\": [\n      \"Equipment Loan\",\n      \"Business Loan\"\n    ],\n    \"equity\": [\n      \"Owner's Equity\",\n      \"Retained Earnings\",\n      \"Owner's Draw\",\n      \"Owner's Investment\"\n    ]\n  },\n  \"usage_tip\": \"Bank/CC accounts can be mapped to connected Plaid accounts. Use excluded_from_costs to identify potential matches.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Sync Invoices",
+          "description": "Different sync modes for importing invoices from QuickBooks",
+          "item": [
+            {
+              "name": "Sync New Invoices",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{ACCESS_TOKEN}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{PROJECT_URL}}/functions/v1/quickbooks-sync-invoices",
+                  "host": [
+                    "{{PROJECT_URL}}"
+                  ],
+                  "path": [
+                    "functions",
+                    "v1",
+                    "quickbooks-sync-invoices"
+                  ]
+                },
+                "description": "Sync new invoices from QuickBooks. Updates existing invoices if update_existing=true. Cost data is auto-estimated with cost_data_source='estimated'.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"update_existing\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [
+                {
+                  "name": "Success Response",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{ACCESS_TOKEN}}"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{PROJECT_URL}}/functions/v1/quickbooks-sync-invoices",
+                      "host": [
+                        "{{PROJECT_URL}}"
+                      ],
+                      "path": [
+                        "functions",
+                        "v1",
+                        "quickbooks-sync-invoices"
+                      ]
+                    },
+                    "description": "Sync new invoices from QuickBooks. Updates existing invoices if update_existing=true. Cost data is auto-estimated with cost_data_source='estimated'.",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"update_existing\": true\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": true,\n  \"synced\": 5,\n  \"updated\": 2,\n  \"skipped\": 10,\n  \"errors\": [],\n  \"invoices_processed\": 17\n}"
+                }
+              ]
+            },
+            {
+              "name": "Force Resync All",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{ACCESS_TOKEN}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{PROJECT_URL}}/functions/v1/quickbooks-sync-invoices",
+                  "host": [
+                    "{{PROJECT_URL}}"
+                  ],
+                  "path": [
+                    "functions",
+                    "v1",
+                    "quickbooks-sync-invoices"
+                  ]
+                },
+                "description": "DELETE all existing QB invoices and reimport fresh from QuickBooks. Use when data is corrupted or you want a clean slate. CAUTION: Deletes line items and mappings!",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"force_resync\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [
+                {
+                  "name": "Success Response",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{ACCESS_TOKEN}}"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{PROJECT_URL}}/functions/v1/quickbooks-sync-invoices",
+                      "host": [
+                        "{{PROJECT_URL}}"
+                      ],
+                      "path": [
+                        "functions",
+                        "v1",
+                        "quickbooks-sync-invoices"
+                      ]
+                    },
+                    "description": "DELETE all existing QB invoices and reimport fresh from QuickBooks. Use when data is corrupted or you want a clean slate. CAUTION: Deletes line items and mappings!",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"force_resync\": true\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": true,\n  \"synced\": 17,\n  \"updated\": 0,\n  \"skipped\": 0,\n  \"errors\": [],\n  \"message\": \"Force resync completed - all QB data deleted and reimported\",\n  \"invoices\": [\n    {\n      \"id\": \"uuid\",\n      \"invoice\": \"INV-042\",\n      \"client\": \"Amy's Bird Sanctuary\",\n      \"amount\": 239,\n      \"qb_doc_number\": \"1037\",\n      \"service_type\": \"Pest Control\",\n      \"billing_address\": \"4581 Finch St.\\nBayshore, CA 94326\",\n      \"actual_materials_cost\": 52.25,\n      \"actual_labor_cost\": 36.75,\n      \"actual_overhead_cost\": 8.9,\n      \"total_actual_cost\": 97.9,\n      \"actual_profit\": 141.1,\n      \"cost_data_source\": \"estimated\"\n    }\n  ]\n}"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Push Invoice to QuickBooks",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{PROJECT_URL}}/functions/v1/quickbooks-push-invoice",
+              "host": [
+                "{{PROJECT_URL}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "quickbooks-push-invoice"
+              ]
+            },
+            "description": "Push a Mintro invoice TO QuickBooks (opposite of sync). Creates or updates the invoice in QuickBooks.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invoice_id\": \"INVOICE_ID\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{ACCESS_TOKEN}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{PROJECT_URL}}/functions/v1/quickbooks-push-invoice",
+                  "host": [
+                    "{{PROJECT_URL}}"
+                  ],
+                  "path": [
+                    "functions",
+                    "v1",
+                    "quickbooks-push-invoice"
+                  ]
+                },
+                "description": "Push a Mintro invoice TO QuickBooks (opposite of sync). Creates or updates the invoice in QuickBooks.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"invoice_id\": \"INVOICE_ID\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Invoice pushed to QuickBooks\",\n  \"quickbooks_invoice_id\": \"qb-456\",\n  \"quickbooks_doc_number\": \"1038\"\n}"
             }
           ]
         }

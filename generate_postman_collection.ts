@@ -582,10 +582,10 @@ collection.item.push({
             "Handle OAuth callback after user authorizes QuickBooks connection."
         ),
         createRequest("Disconnect QuickBooks", "POST", "/functions/v1/quickbooks-disconnect",
-            {},
+            { quickbooks_connection_id: "YOUR_CONNECTION_ID" },
             [],
-            { success: true, message: "Disconnected from QuickBooks", disconnected_at: "2025-11-22T10:00:00Z" },
-            "Disconnect QuickBooks integration and revoke tokens."
+            { success: true, message: "Disconnected My Company Inc" },
+            "Disconnect QuickBooks integration and revoke tokens. Get the connection_id from the Get QuickBooks Status endpoint."
         ),
         createRequest("Get QuickBooks Status", "POST", "/functions/v1/quickbooks-get-status",
             {},
@@ -593,11 +593,35 @@ collection.item.push({
             { success: true, connected: true, company_name: "ABC Construction LLC", company_id: "COMPANY_ID", last_sync: "2025-11-22T08:00:00Z", token_expires_at: "2025-12-22T10:00:00Z" },
             "Get current QuickBooks connection status and company info."
         ),
-        createRequest("Sync Invoices to QuickBooks", "POST", "/functions/v1/quickbooks-sync-invoices",
-            { invoice_ids: ["INV_ID_1", "INV_ID_2"], sync_all_unpaid: false },
+        createRequest("Sync Invoices From QuickBooks", "POST", "/functions/v1/quickbooks-sync-invoices",
+            {},
             [],
-            { success: true, synced: 2, results: [{ invoice_id: "INV_ID_1", quickbooks_id: "QB-123", status: "synced" }, { invoice_id: "INV_ID_2", quickbooks_id: "QB-124", status: "synced" }] },
-            "Sync invoices to QuickBooks Online. Creates new invoices or updates existing ones."
+            { success: true, invoices_synced: 5, invoices_updated: 10, invoices_skipped: 3, total_found: 18, force_resync: false, message: "Synced 5 new, updated 10 existing, skipped 3" },
+            "Pull invoices FROM QuickBooks Online INTO your system. Optionally pass { force_resync: true } to delete all QB invoices and reimport fresh, or { update_existing: false } to skip updating existing invoices."
+        ),
+        createRequest("Force Resync All QuickBooks Invoices", "POST", "/functions/v1/quickbooks-sync-invoices",
+            { force_resync: true },
+            [],
+            { success: true, invoices_synced: 25, invoices_updated: 0, invoices_skipped: 0, total_found: 25, force_resync: true, message: "Force resync complete! Created 25 invoices from QuickBooks" },
+            "Delete ALL existing QuickBooks-synced invoices and reimport everything fresh from QuickBooks. Use when data is out of sync or mappings are broken."
+        ),
+        createRequest("Delete All QuickBooks Invoices", "POST", "/functions/v1/delete-all-invoices",
+            { delete_all_quickbooks: true, confirm: true },
+            [],
+            { success: true, message: "Deleted 15 invoices, 45 line items, and 15 QuickBooks mappings", deleted: { invoices: 15, invoice_items: 45, quickbooks_mappings: 15 } },
+            "Delete all invoices that were synced from QuickBooks, along with their line items and mappings. Must set confirm=true. For delete_all=true, deletes ALL invoices (use with caution!)."
+        ),
+        createRequest("Push Invoice to QuickBooks", "POST", "/functions/v1/quickbooks-push-invoice",
+            { invoice_id: "YOUR_INVOICE_ID" },
+            [],
+            { success: true, message: "Invoice pushed to QuickBooks", our_invoice_id: "YOUR_INVOICE_ID", quickbooks_invoice_id: "QB-456", quickbooks_doc_number: "INV-001" },
+            "Push a single invoice FROM your system TO QuickBooks Online. Creates a new invoice in QuickBooks or updates an existing one if already synced."
+        ),
+        createRequest("Push All Unsent Invoices to QuickBooks", "POST", "/functions/v1/quickbooks-push-invoice",
+            { push_all_unsynced: true },
+            [],
+            { success: true, message: "Pushed 5 invoices to QuickBooks", pushed: 5, skipped: 2, results: [{ our_invoice_id: "INV-1", quickbooks_invoice_id: "QB-101", status: "created" }, { our_invoice_id: "INV-2", quickbooks_invoice_id: "QB-102", status: "updated" }] },
+            "Push all invoices that haven't been synced to QuickBooks yet. Set push_all_unsynced=true to push all pending invoices."
         )
     ]
 });

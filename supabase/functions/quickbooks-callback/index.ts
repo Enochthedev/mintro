@@ -32,12 +32,12 @@ serve(async (req) => {
     const realmId = url.searchParams.get("realmId");
     const error = url.searchParams.get("error");
 
-    console.log("Callback received:", { 
+    console.log("Callback received:", {
       method: req.method,
-      code: code ? "present" : "missing", 
-      state: state ? "present" : "missing", 
+      code: code ? "present" : "missing",
+      state: state ? "present" : "missing",
       realmId,
-      error 
+      error
     });
 
     const frontendUrl = Deno.env.get("FRONTEND_URL") || "http://localhost:3000";
@@ -47,7 +47,7 @@ serve(async (req) => {
       return new Response(null, {
         status: 302,
         headers: {
-          "Location": `${frontendUrl}/dashboard/quickbooks?status=error&message=${encodeURIComponent(error)}`,
+          "Location": `${frontendUrl}/quickbooks?status=error&message=${encodeURIComponent(error)}`,
         },
       });
     }
@@ -57,7 +57,7 @@ serve(async (req) => {
       return new Response(null, {
         status: 302,
         headers: {
-          "Location": `${frontendUrl}/dashboard/quickbooks?status=error&message=missing_params`,
+          "Location": `${frontendUrl}/quickbooks?status=error&message=missing_params`,
         },
       });
     }
@@ -73,7 +73,7 @@ serve(async (req) => {
       return new Response(null, {
         status: 302,
         headers: {
-          "Location": `${frontendUrl}/dashboard/quickbooks?status=error&message=invalid_state`,
+          "Location": `${frontendUrl}/quickbooks?status=error&message=invalid_state`,
         },
       });
     }
@@ -102,7 +102,7 @@ serve(async (req) => {
       return new Response(null, {
         status: 302,
         headers: {
-          "Location": `${frontendUrl}/dashboard/quickbooks?status=error&message=token_exchange_failed`,
+          "Location": `${frontendUrl}/quickbooks?status=error&message=token_exchange_failed`,
         },
       });
     }
@@ -157,7 +157,7 @@ serve(async (req) => {
       return new Response(null, {
         status: 302,
         headers: {
-          "Location": `${frontendUrl}/dashboard/quickbooks?status=error&message=database_error`,
+          "Location": `${frontendUrl}/quickbooks?status=error&message=database_error`,
         },
       });
     }
@@ -168,7 +168,7 @@ serve(async (req) => {
     return new Response(null, {
       status: 302,
       headers: {
-        "Location": `${frontendUrl}/dashboard/quickbooks?status=success&company=${encodeURIComponent(companyInfo.CompanyName || "Unknown")}`,
+        "Location": `${frontendUrl}/quickbooks?status=success&company=${encodeURIComponent(companyInfo.CompanyName || "Unknown")}`,
       },
     });
 
@@ -178,7 +178,7 @@ serve(async (req) => {
     return new Response(null, {
       status: 302,
       headers: {
-        "Location": `${frontendUrl}/dashboard/quickbooks?status=error&message=${encodeURIComponent(error.message)}`,
+        "Location": `${frontendUrl}/quickbooks?status=error&message=${encodeURIComponent(error.message)}`,
       },
     });
   }

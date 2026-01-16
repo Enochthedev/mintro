@@ -45,7 +45,7 @@ serve(async (req) => {
     // ============================================
     // 1. KEY METRICS (KPI CARDS)
     // ============================================
-    
+
     // Current month invoices
     const { data: currentMonthInvoices } = await supabaseClient
       .from("invoices")
@@ -73,8 +73,8 @@ serve(async (req) => {
       (sum, inv) => sum + parseFloat(inv.amount || 0), 0
     ) || 0;
 
-    const revenueChange = lastMonthRevenue > 0 
-      ? ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 
+    const revenueChange = lastMonthRevenue > 0
+      ? ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
       : 0;
 
     // Year-to-date
@@ -101,7 +101,7 @@ serve(async (req) => {
     // ============================================
     // 2. RECENT ACTIVITY
     // ============================================
-    
+
     // Recent invoices
     const { data: recentInvoices } = await supabaseClient
       .from("invoices")
@@ -144,7 +144,7 @@ serve(async (req) => {
     // ============================================
     // 3. ALERTS & WARNINGS
     // ============================================
-    
+
     // Low margin jobs (< 20%)
     const lowMarginJobs = currentMonthInvoices
       ?.filter(inv => {
@@ -160,13 +160,16 @@ serve(async (req) => {
         margin: parseFloat(((parseFloat(inv.actual_profit || 0) / parseFloat(inv.amount || 0)) * 100).toFixed(2)),
       })) || [];
 
-    // Low stock items
-    const { data: lowStockItems } = await supabaseClient
+    // Low stock items - fetch all active items and filter where current_quantity <= minimum_quantity
+    const { data: allInventoryItems } = await supabaseClient
       .from("inventory_items")
       .select("*")
       .eq("user_id", user.id)
-      .eq("is_active", true)
-      .lte("current_quantity", supabaseClient.raw("minimum_quantity"));
+      .eq("is_active", true);
+
+    const lowStockItems = allInventoryItems?.filter(
+      (item) => item.current_quantity <= item.minimum_quantity
+    ) || [];
 
     // Unpaid invoices
     const { data: unpaidInvoices } = await supabaseClient

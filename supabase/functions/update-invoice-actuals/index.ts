@@ -73,7 +73,7 @@ serve(async (req) => {
     const newProfit = (invoice.amount || 0) - newTotalCost;
 
     // Store previous values for history
-    const hasChanges = 
+    const hasChanges =
       invoice.actual_materials_cost !== newMaterialsCost ||
       invoice.actual_labor_cost !== newLaborCost ||
       invoice.actual_overhead_cost !== newOverheadCost;
@@ -112,6 +112,8 @@ serve(async (req) => {
         cost_override_reason: cost_override_reason,
         cost_override_at: new Date().toISOString(),
         cost_override_by_user: true,
+        // Mark as user-verified so frontend knows this is reliable data
+        cost_data_source: "user_verified",
       })
       .eq("id", invoice_id)
       .select()

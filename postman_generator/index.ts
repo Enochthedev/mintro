@@ -38,6 +38,8 @@ collection.item.push({
                 { key: "start_date", value: "", disabled: true, description: "Start date (YYYY-MM-DD)" },
                 { key: "end_date", value: "", disabled: true, description: "End date (YYYY-MM-DD)" },
                 { key: "has_actual_costs", value: "true", disabled: true, description: "Filter by cost tracking" },
+                { key: "quickbooks_only", value: "true", disabled: true, description: "Only show invoices synced from QuickBooks" },
+                { key: "cost_data_source", value: "estimated", disabled: true, description: "Filter by cost data source (estimated, user_verified, blueprint_linked, transaction_linked)" },
                 { key: "limit", value: "50", disabled: false, description: "Results per page" },
                 { key: "offset", value: "0", disabled: false, description: "Pagination offset" }
             ],
@@ -46,12 +48,31 @@ collection.item.push({
                 invoices: [{
                     id: "uuid", invoice: "INV-001", client: "John Smith Construction",
                     amount: 5000.00, status: "paid", total_actual_cost: 3200.00, actual_profit: 1800.00,
-                    invoice_date: "2025-11-15", due_date: "2025-12-15", service_type: "Kitchen Remodel"
+                    invoice_date: "2025-11-15", due_date: "2025-12-15", service_type: "Kitchen Remodel",
+                    cost_data_source: "user_verified", quickbooks_id: null
                 }],
                 pagination: { total: 45, limit: 50, offset: 0, has_more: false },
                 summary: { total_invoices: 45, total_revenue: 125000.00, total_actual_cost: 78000.00, total_actual_profit: 47000.00, average_profit_margin: 37.60 }
             },
-            "Retrieves a paginated list of invoices with optional filtering."
+            "Retrieves a paginated list of invoices with optional filtering. Use quickbooks_only=true to see only QB-synced invoices. cost_data_source indicates reliability: 'estimated' (auto-guessed), 'user_verified' (reviewed), 'blueprint_linked', 'transaction_linked'."
+        ),
+        createRequest("List QuickBooks Invoices Only", "GET", "/functions/v1/list-invoices?quickbooks_only=true", null,
+            [],
+            {
+                success: true,
+                invoices: [{
+                    id: "uuid", invoice: "INV-042", client: "Amy's Bird Sanctuary",
+                    amount: 239.00, status: "paid", qb_doc_number: "1037",
+                    total_actual_cost: 95.6, actual_profit: 143.4,
+                    invoice_date: "2024-12-21", due_date: "2025-01-20",
+                    service_type: "Pest Control", billing_address: "4581 Finch St.\\nBayshore, CA 94326",
+                    cost_data_source: "estimated", quickbooks_id: "130",
+                    invoice_items: [{ description: "Pest Control", qty: 3, unit_price: 35 }]
+                }],
+                pagination: { total: 12, limit: 50, offset: 0, has_more: false },
+                summary: { total_invoices: 12, total_revenue: 8500.00 }
+            },
+            "Returns only invoices that were synced from QuickBooks. Includes billing_address, qb_doc_number, and cost_data_source fields."
         ),
         createRequest("Get Invoice Details", "GET", "/functions/v1/get-invoice-details", null,
             [{ key: "invoice_id", value: "UUID_HERE", disabled: false, description: "Invoice ID (required)" }],
@@ -60,12 +81,13 @@ collection.item.push({
                 invoice: {
                     id: "uuid", invoice: "INV-001", client: "John Smith Construction", amount: 5000.00, status: "paid",
                     total_actual_cost: 3200.00, actual_profit: 1800.00, invoice_date: "2025-11-15", due_date: "2025-12-15",
+                    cost_data_source: "user_verified", billing_address: "123 Main St\\nAnytown, CA 90210",
                     invoice_items: [{ id: "item-1", description: "Labor - Kitchen Installation", qty: 40, unit_price: 75.00, total_price: 3000.00 }],
                     transaction_job_allocations: [{ id: "alloc-1", allocation_amount: 3200.00, transactions: { id: "tx-1", name: "Home Depot", amount: -3200.00 } }],
-                    profit_summary: { revenue: 5000.00, actual_cost: 3200.00, actual_profit: 1800.00, profit_margin: 36.00 }
+                    profit_summary: { revenue: 5000.00, actual_cost: 3200.00, actual_profit: 1800.00, profit_margin: 36.00, has_cost_override: false }
                 }
             },
-            "Retrieves complete details for a specific invoice."
+            "Retrieves complete details for a specific invoice including cost_data_source for UI display logic."
         ),
         {
             name: "Create Invoice",
@@ -74,43 +96,43 @@ collection.item.push({
                 createRequest("Basic with Transactions", "POST", "/functions/v1/create-invoice",
                     { client: "John Smith Construction", amount: 5000.00, status: "draft", transaction_ids: ["TX_ID_1", "TX_ID_2"], due_date: "2025-12-15", service_type: "Kitchen Remodel" },
                     [],
-                    { success: true, message: "Invoice created successfully", invoice: { id: "new-uuid", invoice: "INV-001", client: "John Smith Construction", amount: 5000.00, status: "draft", total_actual_cost: 3200.00, actual_profit: 1800.00 }, transactions_linked: 2 },
-                    "Create a basic invoice and link transactions immediately for automatic cost tracking."
+                    { success: true, message: "Invoice created successfully", invoice: { id: "new-uuid", invoice: "INV-001", client: "John Smith Construction", amount: 5000.00, status: "draft", total_actual_cost: 3200.00, actual_profit: 1800.00, cost_data_source: "transaction_linked" }, transactions_linked: 2 },
+                    "Create a basic invoice and link transactions immediately for automatic cost tracking. Sets cost_data_source to 'transaction_linked'."
                 ),
                 createRequest("Single Blueprint Auto-Calculate", "POST", "/functions/v1/create-invoice",
                     { client: "John Smith Construction", status: "draft", due_date: "2025-12-15", service_type: "Kitchen Remodel", blueprint_ids: ["bp-kitchen-standard-123"], auto_calculate_from_blueprints: true },
                     [],
-                    { success: true, message: "Invoice created successfully", invoice: { id: "new-uuid", invoice: "INV-002", client: "John Smith Construction", amount: 7500.00, status: "draft" }, blueprints_linked: 1 },
-                    "Create invoice with blueprint - amount auto-calculated from blueprint's target sale price."
+                    { success: true, message: "Invoice created successfully", invoice: { id: "new-uuid", invoice: "INV-002", client: "John Smith Construction", amount: 7500.00, status: "draft", cost_data_source: "blueprint_linked" }, blueprints_linked: 1 },
+                    "Create invoice with blueprint - amount auto-calculated from blueprint's target sale price. Sets cost_data_source to 'blueprint_linked'."
                 ),
                 createRequest("Multiple Blueprints Auto-Calculate", "POST", "/functions/v1/create-invoice",
                     { client: "Sarah & Mike Wedding", status: "draft", due_date: "2025-12-20", service_type: "Wedding Catering", blueprint_ids: ["bp-wedding-dinner-123", "bp-dessert-table-456", "bp-bar-service-789"], auto_calculate_from_blueprints: true },
                     [],
-                    { success: true, message: "Invoice created successfully", invoice: { id: "new-uuid", invoice: "INV-003", client: "Sarah & Mike Wedding", amount: 12500.00, status: "draft" }, blueprints_linked: 3 },
+                    { success: true, message: "Invoice created successfully", invoice: { id: "new-uuid", invoice: "INV-003", client: "Sarah & Mike Wedding", amount: 12500.00, status: "draft", cost_data_source: "blueprint_linked" }, blueprints_linked: 3 },
                     "Create invoice with multiple blueprints - total amount is sum of all blueprint prices."
                 ),
                 createRequest("Manual Amount Override with Blueprint", "POST", "/functions/v1/create-invoice",
                     { client: "Custom Project Inc", amount: 7500.00, status: "draft", service_type: "Custom Package", blueprint_ids: ["bp-kitchen-standard-123"], auto_calculate_from_blueprints: false },
                     [],
-                    { success: true, message: "Invoice created successfully", invoice: { id: "new-uuid", invoice: "INV-004", client: "Custom Project Inc", amount: 7500.00, status: "draft" }, blueprints_linked: 1 },
+                    { success: true, message: "Invoice created successfully", invoice: { id: "new-uuid", invoice: "INV-004", client: "Custom Project Inc", amount: 7500.00, status: "draft", cost_data_source: "blueprint_linked" }, blueprints_linked: 1 },
                     "Create invoice with blueprint but override amount - useful for negotiated custom pricing."
                 ),
                 createRequest("Complete with Line Items", "POST", "/functions/v1/create-invoice",
                     { client: "John Smith Construction", amount: 5000.00, status: "draft", due_date: "2025-12-15", invoice_date: "2025-11-15", service_type: "Kitchen Remodel", tags: ["urgent", "residential"], items: [{ description: "Labor - Kitchen Installation", category: "Labor", qty: 40, unit_price: 75.00 }, { description: "Materials - Cabinets", category: "Materials", qty: 1, unit_price: 2000.00 }] },
                     [],
-                    { success: true, message: "Invoice created successfully", invoice: { id: "new-uuid", invoice: "INV-005", client: "John Smith Construction", amount: 5000.00, tags: ["urgent", "residential"], invoice_items: [{ id: "item-1", description: "Labor - Kitchen Installation", qty: 40, unit_price: 75.00, total_price: 3000.00 }] } },
+                    { success: true, message: "Invoice created successfully", invoice: { id: "new-uuid", invoice: "INV-005", client: "John Smith Construction", amount: 5000.00, tags: ["urgent", "residential"], cost_data_source: "user_verified", invoice_items: [{ id: "item-1", description: "Labor - Kitchen Installation", qty: 40, unit_price: 75.00, total_price: 3000.00 }] } },
                     "Create detailed invoice with line items."
                 ),
                 createRequest("Invoice with Blueprint Variance (Overrides)", "POST", "/functions/v1/create-invoice",
                     { client: "Custom Project Client", status: "draft", due_date: "2025-12-25", service_type: "Custom Build", blueprint_usages: [{ blueprint_id: "bp-kitchen-standard-123", actual_sale_price: 15000, actual_materials_cost: 6000, actual_labor_cost: 4000 }], auto_calculate_from_blueprints: true },
                     [],
-                    { success: true, message: "Invoice created successfully", invoice: { id: "new-uuid", invoice: "INV-006", client: "Custom Project Client", amount: 15000.00, status: "draft" }, blueprints_linked: 1, blueprint_variance: { estimated_total: 12000, actual_total: 10000, variance: -2000 } },
+                    { success: true, message: "Invoice created successfully", invoice: { id: "new-uuid", invoice: "INV-006", client: "Custom Project Client", amount: 15000.00, status: "draft", cost_data_source: "blueprint_linked" }, blueprints_linked: 1, blueprint_variance: { estimated_total: 12000, actual_total: 10000, variance: -2000 } },
                     "Create invoice with blueprint overrides (variance). Use 'blueprint_usages' to specify custom actual costs and prices for this specific invoice."
                 ),
                 createRequest("With Line Item Cost Override (NEW)", "POST", "/functions/v1/create-invoice",
                     { client: "ABC Corp", status: "draft", due_date: "2025-12-30", service_type: "Consulting", items: [{ description: "Website Development - Flat Fee", category: "Revenue", qty: 1, unit_price: 5000.00, override_split: { income: 5000, cost: 3200 } }, { description: "Hosting Setup", category: "Revenue", qty: 1, unit_price: 500.00, override_split: { income: 500, cost: 150 } }] },
                     [],
-                    { success: true, message: "Invoice created successfully", invoice: { id: "new-uuid", invoice: "INV-007", client: "ABC Corp", amount: 5500.00, status: "draft", total_actual_cost: 3350.00, actual_profit: 2150.00 } },
+                    { success: true, message: "Invoice created successfully", invoice: { id: "new-uuid", invoice: "INV-007", client: "ABC Corp", amount: 5500.00, status: "draft", total_actual_cost: 3350.00, actual_profit: 2150.00, cost_data_source: "user_verified" } },
                     "Create invoice with line item cost overrides. Use 'override_split' to manually specify cost/profit breakdown for flat/bundled fee items."
                 )
             ]
@@ -135,10 +157,10 @@ collection.item.push({
             ]
         ),
         createRequest("Update Invoice Actuals", "POST", "/functions/v1/update-invoice-actuals",
-            { invoice_id: "INVOICE_ID", total_actual_cost: 3200.00, actual_materials_cost: 2000.00, actual_labor_cost: 1200.00 },
+            { invoice_id: "INVOICE_ID", actual_materials_cost: 2000.00, actual_labor_cost: 1200.00, actual_overhead_cost: 300.00, cost_override_reason: "Verified from receipts" },
             [],
-            { success: true, message: "Invoice actuals updated", invoice: { id: "INVOICE_ID", total_actual_cost: 3200.00, actual_profit: 1800.00, actual_materials_cost: 2000.00, actual_labor_cost: 1200.00 } },
-            "Manually update actual costs for an invoice. Automatically recalculates profit."
+            { success: true, message: "Invoice costs updated successfully", invoice: { id: "INVOICE_ID", total_actual_cost: 3500.00, actual_profit: 1500.00, actual_materials_cost: 2000.00, actual_labor_cost: 1200.00, actual_overhead_cost: 300.00, cost_data_source: "user_verified" }, profit_breakdown: { revenue: 5000.00, costs: { materials: 2000.00, labor: 1200.00, overhead: 300.00, total: 3500.00 }, profit: 1500.00, profit_margin: "30.00" } },
+            "Manually update actual costs for an invoice. Automatically recalculates profit and sets cost_data_source to 'user_verified'. Use this to verify estimated costs from QuickBooks."
         ),
         createRequest("Suggest Invoice Costs", "POST", "/functions/v1/suggest-invoice-costs",
             { invoice_id: "INVOICE_ID" },
@@ -210,6 +232,28 @@ collection.item.push({
             [],
             { success: true, blueprint: { id: "BP_ID", name: "Standard Kitchen Remodel" }, variance: { materials: { estimated: 2000, actual_avg: 2150, variance_pct: 7.5 }, labor: { estimated: 1500, actual_avg: 1650, variance_pct: 10.0 } }, usages_analyzed: 12 },
             "Analyze variance between estimated and actual costs over time."
+        ),
+        createRequest("Delete All Blueprint Usage", "POST", "/functions/v1/delete-all-blueprint-usage",
+            { confirm_delete: true, invoice_id: null, blueprint_id: null },
+            [],
+            {
+                success: true,
+                message: "Deleted 15 blueprint usage records",
+                deleted_count: 15,
+                deleted_summary: {
+                    unique_blueprints: 5,
+                    unique_invoices: 8,
+                    total_revenue: 75000.00,
+                    total_cost: 48000.00,
+                    total_profit: 27000.00
+                },
+                filters_applied: {
+                    invoice_id: null,
+                    blueprint_id: null
+                },
+                warning: "These records have been permanently deleted and cannot be recovered"
+            },
+            "Delete all blueprint usage records. REQUIRES confirm_delete: true. Optionally filter by invoice_id or blueprint_id. WARNING: Destructive operation!"
         )
     ]
 });
@@ -314,7 +358,7 @@ collection.item.push({
 // QUICKBOOKS INTEGRATION
 collection.item.push({
     name: "QuickBooks Integration",
-    description: "QuickBooks Online integration for invoice syncing",
+    description: "QuickBooks Online integration for invoice syncing. Synced invoices have cost_data_source='estimated' until verified.",
     item: [
         createRequest("Get QuickBooks Auth URL", "POST", "/functions/v1/quickbooks-auth-url",
             {},
@@ -340,11 +384,103 @@ collection.item.push({
             { success: true, message: "QuickBooks disconnected" },
             "Disconnect QuickBooks integration."
         ),
-        createRequest("Sync Invoices to QuickBooks", "POST", "/functions/v1/quickbooks-sync-invoices",
-            { invoice_ids: ["INV_ID_1", "INV_ID_2"], sync_all_unpaid: false },
+        createRequest("Sync Chart of Accounts", "POST", "/functions/v1/quickbooks-sync-chart-of-accounts",
+            {},
             [],
-            { success: true, synced: 2, errors: 0, synced_invoices: [{ id: "INV_ID_1", qb_invoice_id: "qb-123" }] },
-            "Sync invoices to QuickBooks."
+            {
+                success: true,
+                message: "Synced 45 accounts from QuickBooks",
+                synced: 45,
+                category_breakdown: {
+                    expense: 12,
+                    cogs: 5,
+                    revenue: 8,
+                    transfer: 4,
+                    exclude: 10,
+                    other: 6
+                },
+                account_types_found: {
+                    "Cost of Goods Sold": 5,
+                    "Expense": 10,
+                    "Other Expense": 2,
+                    "Income": 6,
+                    "Other Income": 2,
+                    "Bank": 3,
+                    "Credit Card": 1,
+                    "Loan": 2,
+                    "Equity": 4,
+                    "Accounts Receivable": 1,
+                    "Accounts Payable": 1,
+                    "Other Current Asset": 3,
+                    "Fixed Asset": 5
+                },
+                excluded_from_costs: {
+                    bank_accounts: ["Business Checking", "Business Savings", "Petty Cash"],
+                    credit_cards: ["Business Credit Card"],
+                    loans: ["Equipment Loan", "Business Loan"],
+                    equity: ["Owner's Equity", "Retained Earnings", "Owner's Draw", "Owner's Investment"]
+                },
+                usage_tip: "Bank/CC accounts can be mapped to connected Plaid accounts. Use excluded_from_costs to identify potential matches."
+            },
+            "Sync QuickBooks Chart of Accounts for proper expense classification. CALL THIS FIRST after connecting QB! Maps QB AccountTypes (COGS→materials, Expense→labor/overhead, Income→revenue). Bank/CC/Loan/Equity accounts shown but EXCLUDED from cost calculations - can be mapped to Plaid banks."
+        ),
+        {
+            name: "Sync Invoices",
+            description: "Different sync modes for importing invoices from QuickBooks",
+            item: [
+                createRequest("Sync New Invoices", "POST", "/functions/v1/quickbooks-sync-invoices",
+                    { update_existing: true },
+                    [],
+                    {
+                        success: true,
+                        synced: 5,
+                        updated: 2,
+                        skipped: 10,
+                        errors: [],
+                        invoices_processed: 17
+                    },
+                    "Sync new invoices from QuickBooks. Updates existing invoices if update_existing=true. Cost data is auto-estimated with cost_data_source='estimated'."
+                ),
+                createRequest("Force Resync All", "POST", "/functions/v1/quickbooks-sync-invoices",
+                    { force_resync: true },
+                    [],
+                    {
+                        success: true,
+                        synced: 17,
+                        updated: 0,
+                        skipped: 0,
+                        errors: [],
+                        message: "Force resync completed - all QB data deleted and reimported",
+                        invoices: [{
+                            id: "uuid",
+                            invoice: "INV-042",
+                            client: "Amy's Bird Sanctuary",
+                            amount: 239.00,
+                            qb_doc_number: "1037",
+                            service_type: "Pest Control",
+                            billing_address: "4581 Finch St.\nBayshore, CA 94326",
+                            actual_materials_cost: 52.25,
+                            actual_labor_cost: 36.75,
+                            actual_overhead_cost: 8.90,
+                            total_actual_cost: 97.90,
+                            actual_profit: 141.10,
+                            cost_data_source: "estimated"
+                        }]
+                    },
+                    "DELETE all existing QB invoices and reimport fresh from QuickBooks. Use when data is corrupted or you want a clean slate. CAUTION: Deletes line items and mappings!"
+                )
+            ]
+        },
+        createRequest("Push Invoice to QuickBooks", "POST", "/functions/v1/quickbooks-push-invoice",
+            { invoice_id: "INVOICE_ID" },
+            [],
+            {
+                success: true,
+                message: "Invoice pushed to QuickBooks",
+                quickbooks_invoice_id: "qb-456",
+                quickbooks_doc_number: "1038"
+            },
+            "Push a Mintro invoice TO QuickBooks (opposite of sync). Creates or updates the invoice in QuickBooks."
         )
     ]
 });

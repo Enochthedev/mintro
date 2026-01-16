@@ -121,14 +121,19 @@ serve(async (req) => {
       throw txError;
     }
 
+    // Plaid convention:
+    // - Negative amounts = money OUT (expenses, payments, purchases)
+    // - Positive amounts = money IN (income, deposits, refunds)
     const totalExpenses = transactions?.reduce((sum, tx) => {
       const amount = parseFloat(tx.amount || 0);
-      return amount > 0 ? sum + amount : sum;
+      // Expenses are NEGATIVE in Plaid (money leaving account)
+      return amount < 0 ? sum + Math.abs(amount) : sum;
     }, 0) || 0;
 
     const totalIncome = transactions?.reduce((sum, tx) => {
       const amount = parseFloat(tx.amount || 0);
-      return amount < 0 ? sum + Math.abs(amount) : sum;
+      // Income is POSITIVE in Plaid (money entering account)
+      return amount > 0 ? sum + amount : sum;
     }, 0) || 0;
 
     // ============================================

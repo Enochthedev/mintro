@@ -42,6 +42,7 @@ serve(async (req) => {
     const start_date = url.searchParams.get("start_date");
     const end_date = url.searchParams.get("end_date");
     const has_actual_costs = url.searchParams.get("has_actual_costs");
+    const quickbooks_only = url.searchParams.get("quickbooks_only");
     const limit = parseInt(url.searchParams.get("limit") || "50");
     const offset = parseInt(url.searchParams.get("offset") || "0");
 
@@ -104,6 +105,13 @@ serve(async (req) => {
       query = query.not("total_actual_cost", "is", null);
     } else if (has_actual_costs === "false") {
       query = query.is("total_actual_cost", null);
+    }
+
+    // Filter for QuickBooks invoices only
+    if (quickbooks_only === "true") {
+      query = query.not("quickbooks_id", "is", null);
+    } else if (quickbooks_only === "false") {
+      query = query.is("quickbooks_id", null);
     }
 
     query = query
