@@ -58,6 +58,13 @@ export function getAnalyticsSection() {
                     service_type_breakdown: [
                         { service_type: "Kitchen Remodel", revenue: 50000, cost: 32000, profit: 18000, profit_margin: 36.00 }
                     ],
+                    expense_breakdown: [
+                        { category: "Materials", amount: 25000.00 },
+                        { category: "Labor", amount: 45000.00 },
+                        { category: "Overhead", amount: 15000.00 },
+                        { category: "Miscellaneous", amount: 5000.00 },
+                        { category: "Uncategorized", amount: 0.00 }
+                    ],
                     month_over_month: {
                         current_month_revenue: 15000.00,
                         last_month_revenue: 13500.00,

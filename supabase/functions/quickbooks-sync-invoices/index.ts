@@ -425,6 +425,20 @@ serve(async (req) => {
         const serviceType = deriveServiceType(qbInvoice.Line);
         const estimatedCosts = calculateCostsFromLineItems(qbInvoice.Line, accountMap.size > 0 ? accountMap : null);
 
+        // Build line_items JSONB for quick access
+        const qbLineItems = (qbInvoice.Line || []).filter((line: any) =>
+          line.DetailType === "SalesItemLineDetail"
+        );
+        const lineItemsJsonb = qbLineItems.map((line: any) => ({
+          description: line.Description || line.SalesItemLineDetail?.ItemRef?.name || "Item",
+          category: null, // QB doesn't provide category directly
+          qty: Math.round(line.SalesItemLineDetail?.Qty || 1),
+          unit_price: line.SalesItemLineDetail?.UnitPrice || 0,
+          total: Math.round(line.SalesItemLineDetail?.Qty || 1) * (line.SalesItemLineDetail?.UnitPrice || 0),
+          qb_item_ref: line.SalesItemLineDetail?.ItemRef?.value || null,
+          qb_item_name: line.SalesItemLineDetail?.ItemRef?.name || null,
+        }));
+
         const invoiceData = {
           user_id: user.id,
           qb_doc_number: qbInvoice.DocNumber || null,
@@ -436,6 +450,8 @@ serve(async (req) => {
           notes: qbInvoice.CustomerMemo?.value || null,
           billing_address: billingAddress,
           service_type: serviceType,
+          // Line items as JSONB for quick access
+          line_items: lineItemsJsonb,
           // Estimated costs from QB line items (can be overridden later by user)
           actual_materials_cost: estimatedCosts.materials > 0 ? estimatedCosts.materials : null,
           actual_labor_cost: estimatedCosts.labor > 0 ? estimatedCosts.labor : null,
@@ -574,7 +590,14 @@ async function rebuildLineItems(supabaseClient: any, invoiceId: string, lines: a
     line.DetailType === "SalesItemLineDetail"
   );
 
-  if (lineItems.length === 0) return;
+  if (lineItems.length === 0) {
+    // Clear line_items JSONB if no items
+    await supabaseClient
+      .from("invoices")
+      .update({ line_items: [] })
+      .eq("id", invoiceId);
+    return;
+  }
 
   const itemsToInsert = lineItems.map((line: any) => ({
     invoice_id: invoiceId,
@@ -593,4 +616,20 @@ async function rebuildLineItems(supabaseClient: any, invoiceId: string, lines: a
   if (error) {
     console.log("Line items rebuild error:", error);
   }
+
+  // Also update line_items JSONB on the invoice for quick access
+  const lineItemsJsonb = itemsToInsert.map(item => ({
+    description: item.description,
+    category: null,
+    qty: item.qty,
+    unit_price: item.unit_price,
+    total: item.qty * item.unit_price,
+    qb_item_ref: item.quickbooks_item_ref,
+    qb_item_name: item.quickbooks_item_name,
+  }));
+
+  await supabaseClient
+    .from("invoices")
+    .update({ line_items: lineItemsJsonb })
+    .eq("id", invoiceId);
 }

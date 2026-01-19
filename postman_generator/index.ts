@@ -49,7 +49,11 @@ collection.item.push({
                     id: "uuid", invoice: "INV-001", client: "John Smith Construction",
                     amount: 5000.00, status: "paid", total_actual_cost: 3200.00, actual_profit: 1800.00,
                     invoice_date: "2025-11-15", due_date: "2025-12-15", service_type: "Kitchen Remodel",
-                    cost_data_source: "user_verified", quickbooks_id: null
+                    cost_data_source: "user_verified", quickbooks_id: null,
+                    line_items: [
+                        { description: "Labor - Kitchen Installation", category: "Labor", qty: 40, unit_price: 75.00, total: 3000.00 },
+                        { description: "Materials - Cabinets", category: "Materials", qty: 1, unit_price: 2000.00, total: 2000.00 }
+                    ]
                 }],
                 pagination: { total: 45, limit: 50, offset: 0, has_more: false },
                 summary: { total_invoices: 45, total_revenue: 125000.00, total_actual_cost: 78000.00, total_actual_profit: 47000.00, average_profit_margin: 37.60 }
@@ -137,12 +141,79 @@ collection.item.push({
                 )
             ]
         },
-        createRequest("Update Invoice", "POST", "/functions/v1/update-invoice",
-            { invoice_id: "INVOICE_ID", status: "sent", notes: "Invoice sent to client", transaction_ids: ["TX_ID_1", "TX_ID_2"] },
-            [],
-            { success: true, message: "Invoice updated successfully", invoice: { id: "INVOICE_ID", invoice: "INV-001", status: "sent", updated_at: "2025-11-22T10:30:00Z" }, transactions_linked: 2 },
-            "Update invoice fields including status, notes, and linked transactions."
-        ),
+        {
+            name: "Update Invoice",
+            description: "Multiple examples of updating invoices",
+            item: [
+                createRequest("Update Metadata Only", "POST", "/functions/v1/update-invoice",
+                    { invoice_id: "INVOICE_ID", status: "sent", notes: "Invoice sent to client", service_type: "Consulting" },
+                    [],
+                    { success: true, message: "Invoice updated successfully", invoice: { id: "INVOICE_ID", invoice: "INV-001", status: "sent", updated_at: "2025-11-22T10:30:00Z" } },
+                    "Update basic invoice fields like status, notes, service_type."
+                ),
+                createRequest("Update Line Items & Costs (Full)", "POST", "/functions/v1/update-invoice",
+                    { 
+                        invoice_id: "INVOICE_ID", 
+                        items: [
+                            { description: "Labor - Installation", category: "Labor", qty: 40, unit_price: 75.00 },
+                            { description: "Materials - Supplies", category: "Materials", qty: 10, unit_price: 50.00 }
+                        ],
+                        actual_materials_cost: 500,
+                        actual_labor_cost: 2000,
+                        actual_overhead_cost: 100,
+                        cost_override_reason: "Updated from invoice editor"
+                    },
+                    [],
+                    { 
+                        success: true, 
+                        message: "Invoice updated successfully", 
+                        invoice: { 
+                            id: "INVOICE_ID", 
+                            invoice: "INV-001", 
+                            amount: 3500.00, 
+                            total_actual_cost: 2600.00,
+                            actual_profit: 900.00,
+                            actual_materials_cost: 500,
+                            actual_labor_cost: 2000,
+                            actual_overhead_cost: 100,
+                            cost_data_source: "user_verified",
+                            line_items: [
+                                { description: "Labor - Installation", category: "Labor", qty: 40, unit_price: 75.00, total: 3000.00 },
+                                { description: "Materials - Supplies", category: "Materials", qty: 10, unit_price: 50.00, total: 500.00 }
+                            ]
+                        },
+                        items_updated: true
+                    },
+                    "⭐ RECOMMENDED: Update line items AND cost breakdown in ONE call. Amount is recalculated from items. Costs, profit, and line_items JSONB all updated."
+                ),
+                createRequest("Update Line Items Only", "POST", "/functions/v1/update-invoice",
+                    { 
+                        invoice_id: "INVOICE_ID", 
+                        items: [
+                            { description: "Consulting", category: "Labor", qty: 10, unit_price: 150.00 }
+                        ]
+                    },
+                    [],
+                    { 
+                        success: true, 
+                        message: "Invoice updated successfully", 
+                        invoice: { 
+                            id: "INVOICE_ID", 
+                            amount: 1500.00,
+                            line_items: [{ description: "Consulting", category: "Labor", qty: 10, unit_price: 150.00, total: 1500.00 }]
+                        },
+                        items_updated: true
+                    },
+                    "Update only line items. Amount is recalculated. Profit recalculated from existing costs."
+                ),
+                createRequest("Link Transactions", "POST", "/functions/v1/update-invoice",
+                    { invoice_id: "INVOICE_ID", transaction_ids: ["TX_ID_1", "TX_ID_2"] },
+                    [],
+                    { success: true, message: "Invoice updated successfully", invoice: { id: "INVOICE_ID", cost_data_source: "transaction_linked" }, transactions_linked: 2 },
+                    "Link bank transactions to invoice. Costs auto-calculated from linked transactions."
+                )
+            ]
+        },
         createRequest("Delete Invoice", "POST", "/functions/v1/delete-invoice",
             { invoice_id: "INVOICE_ID", force: false },
             [],

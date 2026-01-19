@@ -426,7 +426,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"invoices\": [\n    {\n      \"id\": \"uuid\",\n      \"invoice\": \"INV-001\",\n      \"client\": \"John Smith Construction\",\n      \"amount\": 5000,\n      \"status\": \"paid\",\n      \"total_actual_cost\": 3200,\n      \"actual_profit\": 1800,\n      \"invoice_date\": \"2025-11-15\",\n      \"due_date\": \"2025-12-15\",\n      \"service_type\": \"Kitchen Remodel\",\n      \"cost_data_source\": \"user_verified\",\n      \"quickbooks_id\": null\n    }\n  ],\n  \"pagination\": {\n    \"total\": 45,\n    \"limit\": 50,\n    \"offset\": 0,\n    \"has_more\": false\n  },\n  \"summary\": {\n    \"total_invoices\": 45,\n    \"total_revenue\": 125000,\n    \"total_actual_cost\": 78000,\n    \"total_actual_profit\": 47000,\n    \"average_profit_margin\": 37.6\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"invoices\": [\n    {\n      \"id\": \"uuid\",\n      \"invoice\": \"INV-001\",\n      \"client\": \"John Smith Construction\",\n      \"amount\": 5000,\n      \"status\": \"paid\",\n      \"total_actual_cost\": 3200,\n      \"actual_profit\": 1800,\n      \"invoice_date\": \"2025-11-15\",\n      \"due_date\": \"2025-12-15\",\n      \"service_type\": \"Kitchen Remodel\",\n      \"cost_data_source\": \"user_verified\",\n      \"quickbooks_id\": null,\n      \"line_items\": [\n        {\n          \"description\": \"Labor - Kitchen Installation\",\n          \"category\": \"Labor\",\n          \"qty\": 40,\n          \"unit_price\": 75,\n          \"total\": 3000\n        },\n        {\n          \"description\": \"Materials - Cabinets\",\n          \"category\": \"Materials\",\n          \"qty\": 1,\n          \"unit_price\": 2000,\n          \"total\": 2000\n        }\n      ]\n    }\n  ],\n  \"pagination\": {\n    \"total\": 45,\n    \"limit\": 50,\n    \"offset\": 0,\n    \"has_more\": false\n  },\n  \"summary\": {\n    \"total_invoices\": 45,\n    \"total_revenue\": 125000,\n    \"total_actual_cost\": 78000,\n    \"total_actual_profit\": 47000,\n    \"average_profit_margin\": 37.6\n  }\n}"
             }
           ]
         },
@@ -1183,44 +1183,11 @@
         },
         {
           "name": "Update Invoice",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{ACCESS_TOKEN}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{PROJECT_URL}}/functions/v1/update-invoice",
-              "host": [
-                "{{PROJECT_URL}}"
-              ],
-              "path": [
-                "functions",
-                "v1",
-                "update-invoice"
-              ]
-            },
-            "description": "Update invoice fields including status, notes, and linked transactions.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"invoice_id\": \"INVOICE_ID\",\n  \"status\": \"sent\",\n  \"notes\": \"Invoice sent to client\",\n  \"transaction_ids\": [\n    \"TX_ID_1\",\n    \"TX_ID_2\"\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "response": [
+          "description": "Multiple examples of updating invoices",
+          "item": [
             {
-              "name": "Success Response",
-              "originalRequest": {
+              "name": "Update Metadata Only",
+              "request": {
                 "method": "POST",
                 "header": [
                   {
@@ -1243,10 +1210,10 @@
                     "update-invoice"
                   ]
                 },
-                "description": "Update invoice fields including status, notes, and linked transactions.",
+                "description": "Update basic invoice fields like status, notes, service_type.",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"invoice_id\": \"INVOICE_ID\",\n  \"status\": \"sent\",\n  \"notes\": \"Invoice sent to client\",\n  \"transaction_ids\": [\n    \"TX_ID_1\",\n    \"TX_ID_2\"\n  ]\n}",
+                  "raw": "{\n  \"invoice_id\": \"INVOICE_ID\",\n  \"status\": \"sent\",\n  \"notes\": \"Invoice sent to client\",\n  \"service_type\": \"Consulting\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1254,15 +1221,309 @@
                   }
                 }
               },
-              "status": "OK",
-              "code": 200,
-              "header": [
+              "response": [
                 {
-                  "key": "Content-Type",
-                  "value": "application/json"
+                  "name": "Success Response",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{ACCESS_TOKEN}}"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{PROJECT_URL}}/functions/v1/update-invoice",
+                      "host": [
+                        "{{PROJECT_URL}}"
+                      ],
+                      "path": [
+                        "functions",
+                        "v1",
+                        "update-invoice"
+                      ]
+                    },
+                    "description": "Update basic invoice fields like status, notes, service_type.",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"invoice_id\": \"INVOICE_ID\",\n  \"status\": \"sent\",\n  \"notes\": \"Invoice sent to client\",\n  \"service_type\": \"Consulting\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Invoice updated successfully\",\n  \"invoice\": {\n    \"id\": \"INVOICE_ID\",\n    \"invoice\": \"INV-001\",\n    \"status\": \"sent\",\n    \"updated_at\": \"2025-11-22T10:30:00Z\"\n  }\n}"
                 }
-              ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Invoice updated successfully\",\n  \"invoice\": {\n    \"id\": \"INVOICE_ID\",\n    \"invoice\": \"INV-001\",\n    \"status\": \"sent\",\n    \"updated_at\": \"2025-11-22T10:30:00Z\"\n  },\n  \"transactions_linked\": 2\n}"
+              ]
+            },
+            {
+              "name": "Update Line Items & Costs (Full)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{ACCESS_TOKEN}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{PROJECT_URL}}/functions/v1/update-invoice",
+                  "host": [
+                    "{{PROJECT_URL}}"
+                  ],
+                  "path": [
+                    "functions",
+                    "v1",
+                    "update-invoice"
+                  ]
+                },
+                "description": "⭐ RECOMMENDED: Update line items AND cost breakdown in ONE call. Amount is recalculated from items. Costs, profit, and line_items JSONB all updated.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"invoice_id\": \"INVOICE_ID\",\n  \"items\": [\n    {\n      \"description\": \"Labor - Installation\",\n      \"category\": \"Labor\",\n      \"qty\": 40,\n      \"unit_price\": 75\n    },\n    {\n      \"description\": \"Materials - Supplies\",\n      \"category\": \"Materials\",\n      \"qty\": 10,\n      \"unit_price\": 50\n    }\n  ],\n  \"actual_materials_cost\": 500,\n  \"actual_labor_cost\": 2000,\n  \"actual_overhead_cost\": 100,\n  \"cost_override_reason\": \"Updated from invoice editor\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [
+                {
+                  "name": "Success Response",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{ACCESS_TOKEN}}"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{PROJECT_URL}}/functions/v1/update-invoice",
+                      "host": [
+                        "{{PROJECT_URL}}"
+                      ],
+                      "path": [
+                        "functions",
+                        "v1",
+                        "update-invoice"
+                      ]
+                    },
+                    "description": "⭐ RECOMMENDED: Update line items AND cost breakdown in ONE call. Amount is recalculated from items. Costs, profit, and line_items JSONB all updated.",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"invoice_id\": \"INVOICE_ID\",\n  \"items\": [\n    {\n      \"description\": \"Labor - Installation\",\n      \"category\": \"Labor\",\n      \"qty\": 40,\n      \"unit_price\": 75\n    },\n    {\n      \"description\": \"Materials - Supplies\",\n      \"category\": \"Materials\",\n      \"qty\": 10,\n      \"unit_price\": 50\n    }\n  ],\n  \"actual_materials_cost\": 500,\n  \"actual_labor_cost\": 2000,\n  \"actual_overhead_cost\": 100,\n  \"cost_override_reason\": \"Updated from invoice editor\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Invoice updated successfully\",\n  \"invoice\": {\n    \"id\": \"INVOICE_ID\",\n    \"invoice\": \"INV-001\",\n    \"amount\": 3500,\n    \"total_actual_cost\": 2600,\n    \"actual_profit\": 900,\n    \"actual_materials_cost\": 500,\n    \"actual_labor_cost\": 2000,\n    \"actual_overhead_cost\": 100,\n    \"cost_data_source\": \"user_verified\",\n    \"line_items\": [\n      {\n        \"description\": \"Labor - Installation\",\n        \"category\": \"Labor\",\n        \"qty\": 40,\n        \"unit_price\": 75,\n        \"total\": 3000\n      },\n      {\n        \"description\": \"Materials - Supplies\",\n        \"category\": \"Materials\",\n        \"qty\": 10,\n        \"unit_price\": 50,\n        \"total\": 500\n      }\n    ]\n  },\n  \"items_updated\": true\n}"
+                }
+              ]
+            },
+            {
+              "name": "Update Line Items Only",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{ACCESS_TOKEN}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{PROJECT_URL}}/functions/v1/update-invoice",
+                  "host": [
+                    "{{PROJECT_URL}}"
+                  ],
+                  "path": [
+                    "functions",
+                    "v1",
+                    "update-invoice"
+                  ]
+                },
+                "description": "Update only line items. Amount is recalculated. Profit recalculated from existing costs.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"invoice_id\": \"INVOICE_ID\",\n  \"items\": [\n    {\n      \"description\": \"Consulting\",\n      \"category\": \"Labor\",\n      \"qty\": 10,\n      \"unit_price\": 150\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [
+                {
+                  "name": "Success Response",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{ACCESS_TOKEN}}"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{PROJECT_URL}}/functions/v1/update-invoice",
+                      "host": [
+                        "{{PROJECT_URL}}"
+                      ],
+                      "path": [
+                        "functions",
+                        "v1",
+                        "update-invoice"
+                      ]
+                    },
+                    "description": "Update only line items. Amount is recalculated. Profit recalculated from existing costs.",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"invoice_id\": \"INVOICE_ID\",\n  \"items\": [\n    {\n      \"description\": \"Consulting\",\n      \"category\": \"Labor\",\n      \"qty\": 10,\n      \"unit_price\": 150\n    }\n  ]\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Invoice updated successfully\",\n  \"invoice\": {\n    \"id\": \"INVOICE_ID\",\n    \"amount\": 1500,\n    \"line_items\": [\n      {\n        \"description\": \"Consulting\",\n        \"category\": \"Labor\",\n        \"qty\": 10,\n        \"unit_price\": 150,\n        \"total\": 1500\n      }\n    ]\n  },\n  \"items_updated\": true\n}"
+                }
+              ]
+            },
+            {
+              "name": "Link Transactions",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{ACCESS_TOKEN}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{PROJECT_URL}}/functions/v1/update-invoice",
+                  "host": [
+                    "{{PROJECT_URL}}"
+                  ],
+                  "path": [
+                    "functions",
+                    "v1",
+                    "update-invoice"
+                  ]
+                },
+                "description": "Link bank transactions to invoice. Costs auto-calculated from linked transactions.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"invoice_id\": \"INVOICE_ID\",\n  \"transaction_ids\": [\n    \"TX_ID_1\",\n    \"TX_ID_2\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [
+                {
+                  "name": "Success Response",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{ACCESS_TOKEN}}"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{PROJECT_URL}}/functions/v1/update-invoice",
+                      "host": [
+                        "{{PROJECT_URL}}"
+                      ],
+                      "path": [
+                        "functions",
+                        "v1",
+                        "update-invoice"
+                      ]
+                    },
+                    "description": "Link bank transactions to invoice. Costs auto-calculated from linked transactions.",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"invoice_id\": \"INVOICE_ID\",\n  \"transaction_ids\": [\n    \"TX_ID_1\",\n    \"TX_ID_2\"\n  ]\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Invoice updated successfully\",\n  \"invoice\": {\n    \"id\": \"INVOICE_ID\",\n    \"cost_data_source\": \"transaction_linked\"\n  },\n  \"transactions_linked\": 2\n}"
+                }
+              ]
             }
           ]
         },
@@ -4140,7 +4401,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"period\": {\n    \"start_date\": \"2025-01-01\",\n    \"end_date\": \"2025-12-31\"\n  },\n  \"overview\": {\n    \"total_revenue\": 150000,\n    \"total_expenses\": 90000,\n    \"net_profit\": 60000,\n    \"profit_margin\": 40\n  },\n  \"job_metrics\": {\n    \"total_invoices\": 45,\n    \"invoices_with_cost_data\": 40,\n    \"invoices_with_transaction_costs\": 35,\n    \"invoices_with_blueprint_estimates\": 20,\n    \"total_job_costs\": 78000,\n    \"total_job_profit\": 47000,\n    \"average_job_profit\": 1175,\n    \"average_job_margin\": 37.6\n  },\n  \"service_type_breakdown\": [\n    {\n      \"service_type\": \"Kitchen Remodel\",\n      \"revenue\": 50000,\n      \"cost\": 32000,\n      \"profit\": 18000,\n      \"profit_margin\": 36\n    }\n  ],\n  \"month_over_month\": {\n    \"current_month_revenue\": 15000,\n    \"last_month_revenue\": 13500,\n    \"revenue_change_percent\": 11.11,\n    \"trend\": \"up\"\n  },\n  \"data_quality\": {\n    \"message\": \"40 of 45 invoices have cost data.\",\n    \"invoices_missing_cost_data\": 5\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"period\": {\n    \"start_date\": \"2025-01-01\",\n    \"end_date\": \"2025-12-31\"\n  },\n  \"overview\": {\n    \"total_revenue\": 150000,\n    \"total_expenses\": 90000,\n    \"net_profit\": 60000,\n    \"profit_margin\": 40\n  },\n  \"job_metrics\": {\n    \"total_invoices\": 45,\n    \"invoices_with_cost_data\": 40,\n    \"invoices_with_transaction_costs\": 35,\n    \"invoices_with_blueprint_estimates\": 20,\n    \"total_job_costs\": 78000,\n    \"total_job_profit\": 47000,\n    \"average_job_profit\": 1175,\n    \"average_job_margin\": 37.6\n  },\n  \"service_type_breakdown\": [\n    {\n      \"service_type\": \"Kitchen Remodel\",\n      \"revenue\": 50000,\n      \"cost\": 32000,\n      \"profit\": 18000,\n      \"profit_margin\": 36\n    }\n  ],\n  \"expense_breakdown\": [\n    {\n      \"category\": \"Materials\",\n      \"amount\": 25000\n    },\n    {\n      \"category\": \"Labor\",\n      \"amount\": 45000\n    },\n    {\n      \"category\": \"Overhead\",\n      \"amount\": 15000\n    },\n    {\n      \"category\": \"Miscellaneous\",\n      \"amount\": 5000\n    },\n    {\n      \"category\": \"Uncategorized\",\n      \"amount\": 0\n    }\n  ],\n  \"month_over_month\": {\n    \"current_month_revenue\": 15000,\n    \"last_month_revenue\": 13500,\n    \"revenue_change_percent\": 11.11,\n    \"trend\": \"up\"\n  },\n  \"data_quality\": {\n    \"message\": \"40 of 45 invoices have cost data.\",\n    \"invoices_missing_cost_data\": 5\n  }\n}"
             }
           ]
         },
@@ -5765,6 +6026,91 @@
                 }
               ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Synced 45 accounts from QuickBooks\",\n  \"synced\": 45,\n  \"category_breakdown\": {\n    \"expense\": 12,\n    \"cogs\": 5,\n    \"revenue\": 8,\n    \"transfer\": 4,\n    \"exclude\": 10,\n    \"other\": 6\n  },\n  \"account_types_found\": {\n    \"Cost of Goods Sold\": 5,\n    \"Expense\": 10,\n    \"Other Expense\": 2,\n    \"Income\": 6,\n    \"Other Income\": 2,\n    \"Bank\": 3,\n    \"Credit Card\": 1,\n    \"Loan\": 2,\n    \"Equity\": 4,\n    \"Accounts Receivable\": 1,\n    \"Accounts Payable\": 1,\n    \"Other Current Asset\": 3,\n    \"Fixed Asset\": 5\n  },\n  \"excluded_from_costs\": {\n    \"bank_accounts\": [\n      \"Business Checking\",\n      \"Business Savings\",\n      \"Petty Cash\"\n    ],\n    \"credit_cards\": [\n      \"Business Credit Card\"\n    ],\n    \"loans\": [\n      \"Equipment Loan\",\n      \"Business Loan\"\n    ],\n    \"equity\": [\n      \"Owner's Equity\",\n      \"Retained Earnings\",\n      \"Owner's Draw\",\n      \"Owner's Investment\"\n    ]\n  },\n  \"usage_tip\": \"Bank/CC accounts can be mapped to connected Plaid accounts. Use excluded_from_costs to identify potential matches.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Sync All QuickBooks Data",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{PROJECT_URL}}/functions/v1/quickbooks-sync-all",
+              "host": [
+                "{{PROJECT_URL}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "quickbooks-sync-all"
+              ]
+            },
+            "description": "🚀 ONE ENDPOINT TO SYNC EVERYTHING! Syncs in order: 1) Chart of Accounts 2) Items (with PurchaseCost!) 3) Invoices (revenue) 4) Purchases (actual expenses) 5) Bills (vendor invoices) 6) Auto-links expenses to invoices via CustomerRef. After this, analytics use REAL costs from QuickBooks!",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{ACCESS_TOKEN}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{PROJECT_URL}}/functions/v1/quickbooks-sync-all",
+                  "host": [
+                    "{{PROJECT_URL}}"
+                  ],
+                  "path": [
+                    "functions",
+                    "v1",
+                    "quickbooks-sync-all"
+                  ]
+                },
+                "description": "🚀 ONE ENDPOINT TO SYNC EVERYTHING! Syncs in order: 1) Chart of Accounts 2) Items (with PurchaseCost!) 3) Invoices (revenue) 4) Purchases (actual expenses) 5) Bills (vendor invoices) 6) Auto-links expenses to invoices via CustomerRef. After this, analytics use REAL costs from QuickBooks!",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Synced 45 accounts, 32 items, 25 invoices, 48 expenses. Linked 12 expense sets to invoices.\",\n  \"sync_results\": {\n    \"chart_of_accounts\": {\n      \"synced\": 45,\n      \"errors\": []\n    },\n    \"items\": {\n      \"synced\": 32,\n      \"with_purchase_cost\": 18,\n      \"errors\": []\n    },\n    \"invoices\": {\n      \"synced\": 20,\n      \"updated\": 5,\n      \"errors\": []\n    },\n    \"expenses\": {\n      \"purchases\": 30,\n      \"bills\": 18,\n      \"errors\": []\n    },\n    \"linking\": {\n      \"matched\": 12,\n      \"total_cost_linked\": 15420.5\n    }\n  },\n  \"data_sources\": {\n    \"revenue\": \"QuickBooks Invoices\",\n    \"costs\": \"QuickBooks Purchases + Bills\",\n    \"item_costs\": \"18 items have PurchaseCost\",\n    \"linked\": \"12 invoices have real QB costs ($15420.50)\"\n  },\n  \"next_steps\": [\n    \"Run get-business-profitability to see accurate analytics\",\n    \"Invoices with cost_data_source='qb_expense_linked' have REAL costs\",\n    \"Unlinked invoices fall back to Chart of Accounts estimation\"\n  ]\n}"
             }
           ]
         },

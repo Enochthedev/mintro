@@ -47,6 +47,11 @@ serve(async (req) => {
       tags,
       items, // Array of line items to replace existing items
       transaction_ids, // Array of transaction IDs to link (replaces existing)
+      // Cost breakdown fields (for manual override)
+      actual_materials_cost,
+      actual_labor_cost,
+      actual_overhead_cost,
+      cost_override_reason,
     } = await req.json();
 
     if (!invoice_id) {
@@ -68,6 +73,23 @@ serve(async (req) => {
     if (service_type !== undefined) updates.service_type = service_type;
     if (notes !== undefined) updates.notes = notes;
     if (tags !== undefined) updates.tags = tags;
+    
+    // Handle cost breakdown if provided (manual override)
+    if (actual_materials_cost !== undefined) updates.actual_materials_cost = actual_materials_cost;
+    if (actual_labor_cost !== undefined) updates.actual_labor_cost = actual_labor_cost;
+    if (actual_overhead_cost !== undefined) updates.actual_overhead_cost = actual_overhead_cost;
+    
+    // Calculate total cost and profit if any cost field is provided
+    if (actual_materials_cost !== undefined || actual_labor_cost !== undefined || actual_overhead_cost !== undefined) {
+      const currentAmount = amount ?? (await supabaseClient.from("invoices").select("amount").eq("id", invoice_id).single()).data?.amount ?? 0;
+      
+      const totalCost = (actual_materials_cost ?? 0) + (actual_labor_cost ?? 0) + (actual_overhead_cost ?? 0);
+      updates.total_actual_cost = totalCost;
+      updates.actual_profit = parseFloat(currentAmount) - totalCost;
+      updates.cost_data_source = "user_verified";
+      updates.cost_override_by_user = true;
+      if (cost_override_reason) updates.cost_override_reason = cost_override_reason;
+    }
 
     // Update invoice
     const { data: updated, error: updateError } = await supabaseClient
@@ -153,10 +175,25 @@ serve(async (req) => {
             return sum + (item.qty * item.unit_price);
           }, 0);
 
-          // Update the invoice amount to reflect the line items total
+          // Build JSONB array for quick access
+          const lineItemsJsonb = itemsToInsert.map(item => ({
+            description: item.description,
+            category: item.category,
+            qty: item.qty,
+            unit_price: item.unit_price,
+            total: item.qty * item.unit_price,
+            is_override: item.is_override || false,
+            override_income: item.override_income || null,
+            override_cost: item.override_cost || null,
+          }));
+
+          // Update the invoice amount AND line_items JSONB
           const { error: updateAmountError } = await supabaseClient
             .from("invoices")
-            .update({ amount: finalAmount })
+            .update({ 
+              amount: finalAmount,
+              line_items: lineItemsJsonb,
+            })
             .eq("id", invoice_id);
 
           if (updateAmountError) {
@@ -164,18 +201,20 @@ serve(async (req) => {
           } else {
             itemsUpdated = true;
             updated.amount = finalAmount;
+            updated.line_items = lineItemsJsonb;
           }
         }
       } else {
-        // If items array is empty, set amount to 0
+        // If items array is empty, set amount to 0 and clear line_items
         const { error: updateAmountError } = await supabaseClient
           .from("invoices")
-          .update({ amount: 0 })
+          .update({ amount: 0, line_items: [] })
           .eq("id", invoice_id);
 
         if (!updateAmountError) {
           finalAmount = 0;
           updated.amount = 0;
+          updated.line_items = [];
           itemsUpdated = true;
         }
       }
@@ -259,8 +298,14 @@ serve(async (req) => {
           }
         }
       }
+    }
 
-      // Recalculate invoice totals
+    // ============================================
+    // ALWAYS RECALCULATE COSTS after items or transactions change
+    // This was the bug - we only recalculated when transaction_ids was provided!
+    // ============================================
+    if (items !== undefined || transaction_ids !== undefined) {
+      // Get all linked transaction costs
       const { data: allAllocations } = await supabaseClient
         .from("transaction_job_allocations")
         .select("allocation_amount")
@@ -271,7 +316,7 @@ serve(async (req) => {
         0
       ) || 0;
 
-      // NEW: Get line item costs (including overrides)
+      // Get line item costs (including overrides)
       const { data: lineItems } = await supabaseClient
         .from("invoice_items")
         .select("category, qty, unit_price, is_override, override_cost")
@@ -282,7 +327,7 @@ serve(async (req) => {
           // Use manual override cost
           return sum + parseFloat(item.override_cost || 0);
         } else if (!item.category || item.category.toLowerCase() !== 'revenue') {
-          // Cost/expense items
+          // Cost/expense items (anything that is NOT revenue is a cost)
           return sum + (item.qty * parseFloat(item.unit_price || 0));
         }
         return sum;
@@ -290,6 +335,7 @@ serve(async (req) => {
 
       const totalActualCost = transactionCosts + lineItemCosts;
 
+      // Calculate profit: revenue - costs
       const actualProfit = totalActualCost > 0
         ? (finalAmount - totalActualCost)
         : null;
@@ -300,6 +346,8 @@ serve(async (req) => {
         .update({
           total_actual_cost: totalActualCost > 0 ? totalActualCost : null,
           actual_profit: actualProfit,
+          // Set cost source based on what data we have
+          cost_data_source: transactionCosts > 0 ? 'transaction_linked' : (lineItemCosts > 0 ? 'line_items' : null),
         })
         .eq("id", invoice_id)
         .select()
@@ -307,6 +355,7 @@ serve(async (req) => {
 
       updated.total_actual_cost = finalInvoice?.total_actual_cost;
       updated.actual_profit = finalInvoice?.actual_profit;
+      updated.cost_data_source = finalInvoice?.cost_data_source;
     }
 
     return new Response(
