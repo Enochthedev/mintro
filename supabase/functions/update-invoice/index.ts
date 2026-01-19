@@ -57,9 +57,8 @@ serve(async (req) => {
     }
 
     // Build update object
-    const updates: any = {
-      updated_at: new Date().toISOString(),
-    };
+    // Note: updated_at is handled automatically by database trigger
+    const updates: any = {};
 
     if (client !== undefined) updates.client = client;
     if (amount !== undefined) updates.amount = amount;

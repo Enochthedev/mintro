@@ -121,20 +121,69 @@ serve(async (req) => {
       throw txError;
     }
 
+    // EXPENSE LOGIC:
+    // - Revenue category = income (not expense)
+    // - Everything else (including Miscellaneous) = expense
+    //
     // Plaid convention:
     // - Negative amounts = money OUT (expenses, payments, purchases)
     // - Positive amounts = money IN (income, deposits, refunds)
+    
+    // Calculate total expenses: All transactions that are NOT categorized as 'Revenue'
+    // This includes: explicit expenses, miscellaneous, uncategorized, etc.
     const totalExpenses = transactions?.reduce((sum, tx) => {
       const amount = parseFloat(tx.amount || 0);
-      // Expenses are NEGATIVE in Plaid (money leaving account)
+      const category = (tx.category || '').toLowerCase().trim();
+      
+      // If category is 'revenue', it's income not expense
+      if (category === 'revenue') {
+        return sum;
+      }
+      
+      // Everything else is an expense (negative in Plaid = money out)
+      // For miscellaneous and other categories, we take the absolute value of negative amounts
       return amount < 0 ? sum + Math.abs(amount) : sum;
     }, 0) || 0;
 
+    // Calculate revenue from transactions (only items categorized as 'Revenue' or positive inflows)
     const totalIncome = transactions?.reduce((sum, tx) => {
       const amount = parseFloat(tx.amount || 0);
-      // Income is POSITIVE in Plaid (money entering account)
+      const category = (tx.category || '').toLowerCase().trim();
+      
+      // Revenue category items (regardless of sign)
+      if (category === 'revenue') {
+        return sum + Math.abs(amount);
+      }
+      
+      // Income is POSITIVE in Plaid (money entering account) and NOT an expense category
       return amount > 0 ? sum + amount : sum;
     }, 0) || 0;
+
+    // Get expense breakdown by category for detailed analytics
+    const expensesByCategory = new Map<string, number>();
+    transactions?.forEach(tx => {
+      const amount = parseFloat(tx.amount || 0);
+      const category = (tx.category || 'Uncategorized').toLowerCase().trim();
+      
+      // Skip revenue items
+      if (category === 'revenue') return;
+      
+      // Only count negative amounts (money out) as expenses
+      if (amount < 0) {
+        const expenseAmount = Math.abs(amount);
+        const displayCategory = category || 'Uncategorized';
+        const current = expensesByCategory.get(displayCategory) || 0;
+        expensesByCategory.set(displayCategory, current + expenseAmount);
+      }
+    });
+
+    // Convert expense breakdown map to array
+    const expenseBreakdown = Array.from(expensesByCategory.entries())
+      .map(([category, amount]) => ({
+        category: category.charAt(0).toUpperCase() + category.slice(1),
+        amount: parseFloat(amount.toFixed(2)),
+      }))
+      .sort((a, b) => b.amount - a.amount);
 
     // ============================================
     // CALCULATE PROFIT FOR EACH INVOICE
@@ -314,6 +363,7 @@ serve(async (req) => {
           average_job_margin: parseFloat(averageJobMargin.toFixed(2)),
         },
         service_type_breakdown: serviceTypes,
+        expense_breakdown: expenseBreakdown,
         month_over_month: {
           current_month_revenue: parseFloat(currentMonthRevenue.toFixed(2)),
           current_month_profit: parseFloat(currentMonthProfit.toFixed(2)),

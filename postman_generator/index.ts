@@ -424,6 +424,33 @@ collection.item.push({
             },
             "Sync QuickBooks Chart of Accounts for proper expense classification. CALL THIS FIRST after connecting QB! Maps QB AccountTypes (COGS→materials, Expense→labor/overhead, Income→revenue). Bank/CC/Loan/Equity accounts shown but EXCLUDED from cost calculations - can be mapped to Plaid banks."
         ),
+        createRequest("Sync All QuickBooks Data", "POST", "/functions/v1/quickbooks-sync-all",
+            {},
+            [],
+            {
+                success: true,
+                message: "Synced 45 accounts, 32 items, 25 invoices, 48 expenses. Linked 12 expense sets to invoices.",
+                sync_results: {
+                    chart_of_accounts: { synced: 45, errors: [] },
+                    items: { synced: 32, with_purchase_cost: 18, errors: [] },
+                    invoices: { synced: 20, updated: 5, errors: [] },
+                    expenses: { purchases: 30, bills: 18, errors: [] },
+                    linking: { matched: 12, total_cost_linked: 15420.50 }
+                },
+                data_sources: {
+                    revenue: "QuickBooks Invoices",
+                    costs: "QuickBooks Purchases + Bills",
+                    item_costs: "18 items have PurchaseCost",
+                    linked: "12 invoices have real QB costs ($15420.50)"
+                },
+                next_steps: [
+                    "Run get-business-profitability to see accurate analytics",
+                    "Invoices with cost_data_source='qb_expense_linked' have REAL costs",
+                    "Unlinked invoices fall back to Chart of Accounts estimation"
+                ]
+            },
+            "🚀 ONE ENDPOINT TO SYNC EVERYTHING! Syncs in order: 1) Chart of Accounts 2) Items (with PurchaseCost!) 3) Invoices (revenue) 4) Purchases (actual expenses) 5) Bills (vendor invoices) 6) Auto-links expenses to invoices via CustomerRef. After this, analytics use REAL costs from QuickBooks!"
+        ),
         {
             name: "Sync Invoices",
             description: "Different sync modes for importing invoices from QuickBooks",
