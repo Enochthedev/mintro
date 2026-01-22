@@ -145,6 +145,7 @@ serve(async (req) => {
                 }
 
                 // Update invoice with real QB costs
+                // actual_profit is a GENERATED column - computed automatically
                 await supabaseClient
                     .from("invoices")
                     .update({
@@ -152,7 +153,6 @@ serve(async (req) => {
                         actual_materials_cost: materialsCost,
                         actual_labor_cost: laborCost,
                         actual_overhead_cost: overheadCost,
-                        actual_profit: (invoice.amount || 0) - totalFromQB,
                         cost_data_source: "qb_expense_linked",
                         updated_at: new Date().toISOString(),
                     })

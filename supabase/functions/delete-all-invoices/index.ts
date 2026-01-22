@@ -113,14 +113,14 @@ serve(async (req) => {
 
         } else if (delete_all_quickbooks) {
             // Delete only QuickBooks-synced invoices
-            // Approach 1: Find by quickbooks_id on invoices table (most reliable)
+            // Approach 1: Find by quickbooks_invoice_id on invoices table (most reliable)
             const { data: qbInvoices, error: qbError } = await supabaseClient
                 .from("invoices")
                 .select("id")
                 .eq("user_id", user.id)
-                .not("quickbooks_id", "is", null);
+                .not("quickbooks_invoice_id", "is", null);
 
-            console.log("Found QB invoices by quickbooks_id:", qbInvoices?.length || 0);
+            console.log("Found QB invoices by quickbooks_invoice_id:", qbInvoices?.length || 0);
             if (qbError) console.log("QB invoice query error:", qbError);
 
             // Approach 2: Also check mappings table

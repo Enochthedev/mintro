@@ -85,30 +85,78 @@ serve(async (req) => {
       
       const totalCost = (actual_materials_cost ?? 0) + (actual_labor_cost ?? 0) + (actual_overhead_cost ?? 0);
       updates.total_actual_cost = totalCost;
-      updates.actual_profit = parseFloat(currentAmount) - totalCost;
+      // actual_profit is a GENERATED column - computed automatically as: amount - total_actual_cost
       updates.cost_data_source = "user_verified";
       updates.cost_override_by_user = true;
       if (cost_override_reason) updates.cost_override_reason = cost_override_reason;
     }
 
-    // Update invoice
-    const { data: updated, error: updateError } = await supabaseClient
+    // Only update invoice fields if we have fields to update
+    let updated: any = null;
+    
+    // First, check if this is a QB invoice that's being edited
+    // We need to mark it and store original values for merged P&L
+    const { data: currentInvoice } = await supabaseClient
       .from("invoices")
-      .update(updates)
+      .select("source, quickbooks_invoice_id, amount, total_actual_cost, original_qb_amount, edited_after_sync")
       .eq("id", invoice_id)
       .eq("user_id", user.id)
-      .select()
       .single();
 
-    if (updateError) {
-      throw updateError;
+    if (currentInvoice?.source === "quickbooks" && Object.keys(updates).length > 0) {
+      // This is a QB invoice being edited - mark it and preserve original values
+      if (!currentInvoice.edited_after_sync) {
+        updates.edited_after_sync = true;
+        // Store original QB values if not already stored
+        if (!currentInvoice.original_qb_amount) {
+          updates.original_qb_amount = currentInvoice.amount;
+          updates.original_qb_cost = currentInvoice.total_actual_cost;
+        }
+      }
     }
-
-    if (!updated) {
-      return new Response(
-        JSON.stringify({ error: "Invoice not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    
+    if (Object.keys(updates).length > 0) {
+      const { data, error: updateError } = await supabaseClient
+        .from("invoices")
+        .update(updates)
+        .eq("id", invoice_id)
+        .eq("user_id", user.id)
+        .select()
+        .single();
+      
+      if (updateError) {
+        throw updateError;
+      }
+      
+      if (!data) {
+        return new Response(
+          JSON.stringify({ error: "Invoice not found" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      updated = data;
+    } else {
+      // No fields to update - just fetch the current invoice
+      const { data, error: fetchError } = await supabaseClient
+        .from("invoices")
+        .select()
+        .eq("id", invoice_id)
+        .eq("user_id", user.id)
+        .single();
+      
+      if (fetchError) {
+        throw fetchError;
+      }
+      
+      if (!data) {
+        return new Response(
+          JSON.stringify({ error: "Invoice not found" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      updated = data;
     }
 
     // Handle line items update if items provided
@@ -149,61 +197,72 @@ serve(async (req) => {
           }
         }
 
-        const itemsToInsert = items.map((item: any) => ({
-          invoice_id: invoice_id,
-          description: item.description,
-          category: item.category,
-          qty: item.qty ?? 1,
-          unit_price: item.unit_price ?? 0,
-          // Add override columns if override_split is provided
-          ...(item.override_split && {
-            override_income: parseFloat(item.override_split.income || 0),
-            override_cost: parseFloat(item.override_split.cost || 0),
-            is_override: true
-          })
-        }));
-
-        const { error: itemsError } = await supabaseClient
-          .from("invoice_items")
-          .insert(itemsToInsert);
-
-        if (itemsError) {
-          console.error("Error updating invoice items:", itemsError);
-        } else {
-          // Calculate the grand total from line items
-          finalAmount = itemsToInsert.reduce((sum, item) => {
-            return sum + (item.qty * item.unit_price);
-          }, 0);
-
-          // Build JSONB array for quick access
-          const lineItemsJsonb = itemsToInsert.map(item => ({
+        const itemsToInsert = items.map((item: any) => {
+          // Only allow override_split if category is "revenue"
+          const isRevenueCategory = item.category?.toLowerCase() === 'revenue';
+          const hasValidOverride = item.override_split && isRevenueCategory;
+          
+          return {
+            invoice_id: invoice_id,
             description: item.description,
             category: item.category,
-            qty: item.qty,
-            unit_price: item.unit_price,
-            total: item.qty * item.unit_price,
-            is_override: item.is_override || false,
-            override_income: item.override_income || null,
-            override_cost: item.override_cost || null,
-          }));
+            qty: item.qty ?? 1,
+            unit_price: item.unit_price ?? 0,
+            // Only add override columns if override_split is provided AND category is "revenue"
+            // Otherwise explicitly clear them to prevent stale values
+            override_income: hasValidOverride ? parseFloat(item.override_split.income || 0) : null,
+            override_cost: hasValidOverride ? parseFloat(item.override_split.cost || 0) : null,
+            is_override: hasValidOverride ? true : false,
+          };
+        });
 
-          // Update the invoice amount AND line_items JSONB
-          const { error: updateAmountError } = await supabaseClient
-            .from("invoices")
-            .update({ 
-              amount: finalAmount,
-              line_items: lineItemsJsonb,
-            })
-            .eq("id", invoice_id);
+        // Insert and get back the actual inserted items
+        const { data: insertedItems, error: itemsError } = await supabaseClient
+          .from("invoice_items")
+          .insert(itemsToInsert)
+          .select(); // Get back the inserted items with their actual DB values
 
-          if (updateAmountError) {
-            console.error("Error updating invoice amount:", updateAmountError);
-          } else {
-            itemsUpdated = true;
-            updated.amount = finalAmount;
-            updated.line_items = lineItemsJsonb;
-          }
+        if (itemsError) {
+          console.error("Error inserting invoice items:", itemsError);
+          throw itemsError; // Throw error instead of continuing
         }
+
+        // Use the ACTUAL inserted items from the database (not itemsToInsert)
+        // Calculate the grand total from inserted items
+        finalAmount = insertedItems.reduce((sum: number, item: any) => {
+          return sum + (item.qty * parseFloat(item.unit_price || 0));
+        }, 0);
+
+        // Build JSONB array from INSERTED items (actual DB values)
+        const lineItemsJsonb = insertedItems.map((item: any) => ({
+          id: item.id, // Include the DB-generated ID
+          description: item.description,
+          category: item.category,
+          qty: item.qty,
+          unit_price: parseFloat(item.unit_price),
+          total: item.qty * parseFloat(item.unit_price),
+          is_override: item.is_override || false,
+          override_income: item.override_income || null,
+          override_cost: item.override_cost || null,
+        }));
+
+        // Update the invoice amount AND line_items JSONB
+        const { error: updateAmountError } = await supabaseClient
+          .from("invoices")
+          .update({ 
+            amount: finalAmount,
+            line_items: lineItemsJsonb,
+          })
+          .eq("id", invoice_id);
+
+        if (updateAmountError) {
+          console.error("Error updating invoice amount:", updateAmountError);
+          throw updateAmountError; // Throw error instead of just logging
+        }
+        
+        itemsUpdated = true;
+        updated.amount = finalAmount;
+        updated.line_items = lineItemsJsonb;
       } else {
         // If items array is empty, set amount to 0 and clear line_items
         const { error: updateAmountError } = await supabaseClient
@@ -335,17 +394,15 @@ serve(async (req) => {
 
       const totalActualCost = transactionCosts + lineItemCosts;
 
-      // Calculate profit: revenue - costs
-      const actualProfit = totalActualCost > 0
-        ? (finalAmount - totalActualCost)
-        : null;
+      // actual_profit is a GENERATED column - no need to calculate or update it
+      // The database automatically computes: amount - total_actual_cost
 
       // Update invoice with new totals
       const { data: finalInvoice } = await supabaseClient
         .from("invoices")
         .update({
           total_actual_cost: totalActualCost > 0 ? totalActualCost : null,
-          actual_profit: actualProfit,
+          // actual_profit is computed automatically by the database
           // Set cost source based on what data we have
           cost_data_source: transactionCosts > 0 ? 'transaction_linked' : (lineItemCosts > 0 ? 'line_items' : null),
         })
@@ -354,7 +411,7 @@ serve(async (req) => {
         .single();
 
       updated.total_actual_cost = finalInvoice?.total_actual_cost;
-      updated.actual_profit = finalInvoice?.actual_profit;
+      updated.actual_profit = finalInvoice?.actual_profit; // Read from DB (computed)
       updated.cost_data_source = finalInvoice?.cost_data_source;
     }
 

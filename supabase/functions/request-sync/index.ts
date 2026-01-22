@@ -140,4 +140,4 @@ serve(async (req) => {
       }
     );
   }
-});supabase functions deploy request-sync
+});

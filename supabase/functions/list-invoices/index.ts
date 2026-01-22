@@ -109,9 +109,9 @@ serve(async (req) => {
 
     // Filter for QuickBooks invoices only
     if (quickbooks_only === "true") {
-      query = query.not("quickbooks_id", "is", null);
+      query = query.not("quickbooks_invoice_id", "is", null);
     } else if (quickbooks_only === "false") {
-      query = query.is("quickbooks_id", null);
+      query = query.is("quickbooks_invoice_id", null);
     }
 
     query = query

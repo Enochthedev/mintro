@@ -31,6 +31,48 @@ export function getAnalyticsSection() {
                 },
                 "Get comprehensive dashboard summary with KPIs, recent activity, and alerts."
             ),
+            createRequest("⭐ Get Accurate Profitability (QB)", "GET", "/functions/v1/get-accurate-profitability", null,
+                [
+                    { key: "start_date", value: "2026-01-01", disabled: false, description: "Start date (YYYY-MM-DD)" },
+                    { key: "end_date", value: "2026-12-31", disabled: false, description: "End date (YYYY-MM-DD)" }
+                ],
+                {
+                    success: true,
+                    period: { start_date: "2026-01-01", end_date: "2026-12-31" },
+                    summary: {
+                        total_revenue: 45000.00,
+                        total_cost: 22500.00,
+                        total_profit: 22500.00,
+                        profit_margin: 50.00,
+                        invoice_count: 25
+                    },
+                    bank_transactions: {
+                        total_expenses: 18000.00,
+                        total_income: 5000.00,
+                        transaction_count: 186
+                    },
+                    data_quality: {
+                        level: "good",
+                        message: "18 of 25 invoices have real cost data from QuickBooks.",
+                        real_cost_percentage: 72.0,
+                        by_quality: { real_cost: 18, estimated: 5, no_cost: 2 },
+                        by_cost_source: { qb_item_cost: 18, estimated: 5, none: 2 }
+                    },
+                    service_type_breakdown: [
+                        { service_type: "Landscaping", revenue: 25000, cost: 12500, profit: 12500, margin: 50.00, invoice_count: 15, real_cost_count: 12 }
+                    ],
+                    invoices: [
+                        {
+                            invoice_id: "uuid",
+                            invoice_number: "INV-0001",
+                            client: "Cool Cars",
+                            financials: { revenue: 2194, cost: 1239.37, profit: 954.63, margin: 43.51 },
+                            data_quality: { cost_source: "qb_item_cost", quality_level: "excellent", is_real_cost: true }
+                        }
+                    ]
+                },
+                "🎯 BEST FOR QB USERS! Returns ACCURATE profit using QuickBooks Item.PurchaseCost. Shows data quality indicators so you know which invoices have real vs estimated costs. Run quickbooks-full-sync first!"
+            ),
             createRequest("Get Business Profitability", "GET", "/functions/v1/get-business-profitability", null,
                 [
                     { key: "start_date", value: "2025-01-01", disabled: false, description: "Start date (YYYY-MM-DD)" },

@@ -263,7 +263,7 @@ serve(async (req) => {
                         await supabaseClient
                             .from("invoices")
                             .update({
-                                quickbooks_id: qbResult.Invoice.Id,
+                                quickbooks_invoice_id: qbResult.Invoice.Id,
                                 qb_doc_number: qbResult.Invoice.DocNumber || null,
                                 quickbooks_raw_data: qbResult.Invoice,
                             })

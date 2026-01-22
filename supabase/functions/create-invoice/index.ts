@@ -163,19 +163,23 @@ Deno.serve(async (req) => {
         }
       }
 
-      const itemsToInsert = items.map((item) => ({
-        invoice_id: invoice.id,
-        description: item.description,
-        category: item.category,
-        qty: item.qty ?? 1,
-        unit_price: item.unit_price ?? 0,
-        // Add override columns if override_split is provided
-        ...(item.override_split && {
-          override_income: parseFloat(item.override_split.income || 0),
-          override_cost: parseFloat(item.override_split.cost || 0),
-          is_override: true
-        })
-      }));
+      const itemsToInsert = items.map((item) => {
+        // Only allow override_split if category is "revenue"
+        const isRevenueCategory = item.category?.toLowerCase() === 'revenue';
+        const hasValidOverride = item.override_split && isRevenueCategory;
+        
+        return {
+          invoice_id: invoice.id,
+          description: item.description,
+          category: item.category,
+          qty: item.qty ?? 1,
+          unit_price: item.unit_price ?? 0,
+          // Only add override columns if override_split is provided AND category is "revenue"
+          override_income: hasValidOverride ? parseFloat(item.override_split.income || 0) : null,
+          override_cost: hasValidOverride ? parseFloat(item.override_split.cost || 0) : null,
+          is_override: hasValidOverride ? true : false,
+        };
+      });
       const { error: itemsError } = await supabaseClient.from("invoice_items").insert(itemsToInsert);
       if (itemsError) {
         console.error("Error creating invoice items:", itemsError);
@@ -343,7 +347,7 @@ Deno.serve(async (req) => {
     // Calculate total actual cost from blueprints, transactions, and cost line items
     // total_actual_cost = blueprint costs + transaction costs + cost line items (NOT revenue items)
     const totalActualCost = blueprintTotalCost + transactionCosts + lineItemCosts;
-    const actualProfit = totalActualCost > 0 ? ((Number(finalAmount) || 0) - totalActualCost) : null;
+    // actual_profit is a GENERATED column - computed automatically as: amount - total_actual_cost
 
     // Determine cost data source for frontend display
     let costDataSource = null;
@@ -359,7 +363,7 @@ Deno.serve(async (req) => {
     if (totalActualCost > 0 || blueprintTotalCost > 0) {
       await supabaseClient.from("invoices").update({
         total_actual_cost: totalActualCost > 0 ? totalActualCost : null,
-        actual_profit: actualProfit,
+        // actual_profit is computed automatically by the database
         cost_data_source: costDataSource,
       }).eq("id", invoice.id);
     }

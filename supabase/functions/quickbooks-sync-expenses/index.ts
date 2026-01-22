@@ -70,11 +70,12 @@ serve(async (req) => {
             );
         }
 
-        // Get QuickBooks tokens
+        // Get QuickBooks tokens from quickbooks_connections
         const { data: qbAuth, error: qbAuthError } = await supabaseClient
-            .from("quickbooks_auth")
+            .from("quickbooks_connections")
             .select("access_token, refresh_token, realm_id, token_expires_at")
             .eq("user_id", user.id)
+            .eq("status", "active")
             .single();
 
         if (qbAuthError || !qbAuth) {
@@ -101,13 +102,14 @@ serve(async (req) => {
 
             // Update stored tokens
             await supabaseClient
-                .from("quickbooks_auth")
+                .from("quickbooks_connections")
                 .update({
                     access_token: refreshResult.access_token,
                     refresh_token: refreshResult.refresh_token,
                     token_expires_at: new Date(Date.now() + refreshResult.expires_in * 1000).toISOString(),
                 })
-                .eq("user_id", user.id);
+                .eq("user_id", user.id)
+                .eq("status", "active");
         }
 
         const baseUrl = Deno.env.get("QUICKBOOKS_ENVIRONMENT") === "sandbox"

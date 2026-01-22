@@ -495,6 +495,35 @@ collection.item.push({
             },
             "Sync QuickBooks Chart of Accounts for proper expense classification. CALL THIS FIRST after connecting QB! Maps QB AccountTypes (COGS→materials, Expense→labor/overhead, Income→revenue). Bank/CC/Loan/Equity accounts shown but EXCLUDED from cost calculations - can be mapped to Plaid banks."
         ),
+        createRequest("⭐ Full Sync (RECOMMENDED)", "POST", "/functions/v1/quickbooks-full-sync",
+            {},
+            [],
+            {
+                success: true,
+                message: "Full sync complete! 32 items, 45 accounts, 25 invoices, 48 expenses",
+                results: {
+                    items: { synced: 32, with_cost: 18, errors: [] },
+                    accounts: { synced: 45, errors: [] },
+                    invoices: { synced: 20, updated: 5, errors: [] },
+                    expenses: { purchases: 30, bills: 18, errors: [] },
+                    cost_calculation: { invoices_with_real_costs: 18, total_revenue: 45000, total_cost: 22500 }
+                },
+                profitability_summary: {
+                    total_revenue: 45000,
+                    total_cost: 22500,
+                    total_profit: 22500,
+                    profit_margin: 50,
+                    invoices_with_real_costs: 18,
+                    items_with_purchase_cost: 18
+                },
+                data_quality: {
+                    items_with_cost_percentage: 56.25,
+                    invoices_with_real_cost_percentage: 72,
+                    recommendation: "Good coverage of item costs!"
+                }
+            },
+            "🚀 BEST ENDPOINT FOR ACCURATE PROFITS! Syncs Items with PurchaseCost FIRST, then calculates REAL costs per invoice using Item.PurchaseCost × Quantity. Use this instead of quickbooks-sync-all for accurate profit tracking."
+        ),
         createRequest("Sync All QuickBooks Data", "POST", "/functions/v1/quickbooks-sync-all",
             {},
             [],

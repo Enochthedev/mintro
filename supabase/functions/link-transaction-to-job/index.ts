@@ -156,15 +156,13 @@ serve(async (req) => {
         0
       ) || 0;
 
-      const actualProfit = (Number(invoice.amount) || 0) - totalActualCost;
-
-      await supabaseClient
+      // actual_profit is a GENERATED column - computed automatically
+      const { data: updatedInvoice } = await supabaseClient
         .from("invoices")
-        .update({
-          total_actual_cost: totalActualCost,
-          actual_profit: actualProfit,
-        })
-        .eq("id", job_id);
+        .update({ total_actual_cost: totalActualCost })
+        .eq("id", job_id)
+        .select("actual_profit")
+        .single();
 
       return new Response(
         JSON.stringify({
@@ -173,7 +171,7 @@ serve(async (req) => {
           link: updated,
           invoice_totals_updated: {
             total_actual_cost: totalActualCost,
-            actual_profit: actualProfit,
+            actual_profit: updatedInvoice?.actual_profit, // Read from DB
           },
         }),
         {
@@ -216,15 +214,13 @@ serve(async (req) => {
       0
     ) || 0;
 
-    const actualProfit = (Number(invoice.amount) || 0) - totalActualCost;
-
-    await supabaseClient
+    // actual_profit is a GENERATED column - computed automatically
+    const { data: updatedInvoice } = await supabaseClient
       .from("invoices")
-      .update({
-        total_actual_cost: totalActualCost,
-        actual_profit: actualProfit,
-      })
-      .eq("id", job_id);
+      .update({ total_actual_cost: totalActualCost })
+      .eq("id", job_id)
+      .select("actual_profit")
+      .single();
 
     return new Response(
       JSON.stringify({
@@ -245,7 +241,7 @@ serve(async (req) => {
         },
         invoice_totals_updated: {
           total_actual_cost: totalActualCost,
-          actual_profit: actualProfit,
+          actual_profit: updatedInvoice?.actual_profit, // Read from DB
         },
       }),
       {

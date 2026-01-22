@@ -46,11 +46,12 @@ serve(async (req) => {
             );
         }
 
-        // Get QuickBooks tokens
+        // Get QuickBooks tokens from quickbooks_connections (same table as quickbooks-get-status)
         const { data: qbAuth, error: qbAuthError } = await supabaseClient
-            .from("quickbooks_auth")
+            .from("quickbooks_connections")
             .select("access_token, refresh_token, realm_id, token_expires_at")
             .eq("user_id", user.id)
+            .eq("status", "active")
             .single();
 
         if (qbAuthError || !qbAuth) {
@@ -76,13 +77,14 @@ serve(async (req) => {
             accessToken = refreshResult.access_token;
 
             await supabaseClient
-                .from("quickbooks_auth")
+                .from("quickbooks_connections")
                 .update({
                     access_token: refreshResult.access_token,
                     refresh_token: refreshResult.refresh_token,
                     token_expires_at: new Date(Date.now() + refreshResult.expires_in * 1000).toISOString(),
                 })
-                .eq("user_id", user.id);
+                .eq("user_id", user.id)
+                .eq("status", "active");
         }
 
         const baseUrl = Deno.env.get("QUICKBOOKS_ENVIRONMENT") === "sandbox"
@@ -249,7 +251,7 @@ serve(async (req) => {
                         invoiceRecord.actual_labor_cost = costCalc.labor;
                         invoiceRecord.actual_overhead_cost = costCalc.overhead;
                         invoiceRecord.total_actual_cost = costCalc.totalCost;
-                        invoiceRecord.actual_profit = (qbInvoice.TotalAmt || 0) - costCalc.totalCost;
+                        // actual_profit is a GENERATED column - computed automatically
                         invoiceRecord.cost_data_source = costCalc.source;
                     }
 
@@ -404,12 +406,12 @@ serve(async (req) => {
                     }
 
                     // Update invoice with real costs
+                    // actual_profit is a GENERATED column - computed automatically
                     await supabaseClient.from("invoices").update({
                         total_actual_cost: totalCost,
                         actual_materials_cost: materials,
                         actual_labor_cost: labor,
                         actual_overhead_cost: overhead,
-                        actual_profit: (invoice.amount || 0) - totalCost,
                         cost_data_source: "qb_expense_linked",
                     }).eq("id", invoice.id);
 

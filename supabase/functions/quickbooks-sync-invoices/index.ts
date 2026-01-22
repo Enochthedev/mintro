@@ -250,7 +250,7 @@ serve(async (req) => {
     if (force_resync) {
       console.log("Force resync - deleting all QB data...");
 
-      // Delete all invoices with quickbooks_id
+      // Delete all invoices with quickbooks_id (the actual column name)
       const { data: qbInvoices } = await supabaseClient
         .from("invoices")
         .select("id")
@@ -348,10 +348,10 @@ serve(async (req) => {
       try {
         console.log("Processing invoice:", qbInvoice.Id, qbInvoice.DocNumber);
 
-        // Check if already exists by quickbooks_id
+        // Check if already exists by quickbooks_id (the actual column name)
         const { data: existing } = await supabaseClient
           .from("invoices")
-          .select("id")
+          .select("id, edited_after_sync")
           .eq("user_id", user.id)
           .eq("quickbooks_id", qbInvoice.Id)
           .single();
@@ -364,28 +364,39 @@ serve(async (req) => {
             const serviceType = deriveServiceType(qbInvoice.Line);
             const estimatedCosts = calculateCostsFromLineItems(qbInvoice.Line, accountMap.size > 0 ? accountMap : null);
 
-            const updateData = {
+            const shouldUpdateFinancials = !existing.edited_after_sync;
+
+            const updateData: any = {
               qb_doc_number: qbInvoice.DocNumber || null,
               client: qbInvoice.CustomerRef?.name || "Unknown Customer",
-              amount: qbInvoice.TotalAmt || 0,
+              // Always sync status/dates from QB as it is the source of truth for these
               status: qbInvoice.Balance === 0 ? "paid" : (qbInvoice.Balance < qbInvoice.TotalAmt ? "partial" : "unpaid"),
               invoice_date: qbInvoice.TxnDate || null,
               due_date: qbInvoice.DueDate || null,
               notes: qbInvoice.CustomerMemo?.value || qbInvoice.PrivateNote || null,
               billing_address: billingAddress,
               service_type: serviceType,
-              // Estimated costs from QB line items (can be overridden later)
-              actual_materials_cost: estimatedCosts.materials > 0 ? estimatedCosts.materials : null,
-              actual_labor_cost: estimatedCosts.labor > 0 ? estimatedCosts.labor : null,
-              actual_overhead_cost: estimatedCosts.overhead > 0 ? estimatedCosts.overhead : null,
-              total_actual_cost: estimatedCosts.totalCost > 0 ? estimatedCosts.totalCost : null,
-              actual_profit: estimatedCosts.totalCost > 0
-                ? Math.round((qbInvoice.TotalAmt - estimatedCosts.totalCost) * 100) / 100
-                : null,
-              // Mark as estimated so frontend knows this needs verification
-              cost_data_source: estimatedCosts.totalCost > 0 ? "estimated" : null,
               quickbooks_raw_data: qbInvoice,
+              
+              // Always update source tracking
+              source: 'quickbooks',
+              original_qb_amount: qbInvoice.TotalAmt || 0,
+              original_qb_cost: estimatedCosts.totalCost > 0 ? estimatedCosts.totalCost : null,
+              qb_last_synced_at: new Date().toISOString(),
             };
+
+            // Only overwrite financial amounts if NOT edited locally
+            if (shouldUpdateFinancials) {
+              updateData.amount = qbInvoice.TotalAmt || 0;
+              updateData.actual_materials_cost = estimatedCosts.materials > 0 ? estimatedCosts.materials : null;
+              updateData.actual_labor_cost = estimatedCosts.labor > 0 ? estimatedCosts.labor : null;
+              updateData.actual_overhead_cost = estimatedCosts.overhead > 0 ? estimatedCosts.overhead : null;
+              updateData.total_actual_cost = estimatedCosts.totalCost > 0 ? estimatedCosts.totalCost : null;
+              updateData.actual_profit = estimatedCosts.totalCost > 0
+                ? Math.round((qbInvoice.TotalAmt - estimatedCosts.totalCost) * 100) / 100
+                : null;
+              updateData.cost_data_source = estimatedCosts.totalCost > 0 ? "estimated" : null;
+            }
 
             const { error: updateError } = await supabaseClient
               .from("invoices")
@@ -462,8 +473,14 @@ serve(async (req) => {
             : null,
           // Mark as estimated so frontend knows this needs verification
           cost_data_source: estimatedCosts.totalCost > 0 ? "estimated" : null,
-          quickbooks_id: qbInvoice.Id,
+          quickbooks_id: qbInvoice.Id,  // Fixed: use correct column name
           quickbooks_raw_data: qbInvoice,
+          
+          // Source tracking
+          source: 'quickbooks',
+          original_qb_amount: qbInvoice.TotalAmt || 0,
+          original_qb_cost: estimatedCosts.totalCost > 0 ? estimatedCosts.totalCost : null,
+          qb_last_synced_at: new Date().toISOString(),
         };
 
         console.log("Creating invoice with data:", JSON.stringify(invoiceData).substring(0, 200));

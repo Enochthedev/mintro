@@ -10,13 +10,16 @@ const corsHeaders = {
 /**
  * get-business-profitability
  * 
- * REFACTORED: Now calculates profit for ALL invoices using whatever data exists:
- * - Revenue from invoice totals
- * - Costs from linked bank transactions (transaction_job_allocations)
- * - Optional: Estimated costs from blueprints for comparison
- * - Optional: Manual overrides when present
+ * REFACTORED v2: Now uses REAL cost data from QuickBooks Items when available:
  * 
- * The engine NO LONGER requires blueprints or manual overrides to function.
+ * Cost Priority (highest to lowest accuracy):
+ * 1. qb_item_cost - Real costs from QuickBooks Item.PurchaseCost (BEST)
+ * 2. user_verified - Manual user overrides
+ * 3. transaction_linked - Costs from linked bank transactions
+ * 4. blueprint_linked - Estimated from cost blueprints
+ * 5. estimated - Fallback estimation (least accurate)
+ * 
+ * Run quickbooks-full-sync to populate Items with PurchaseCost for accurate profits.
  */
 
 serve(async (req) => {
@@ -56,7 +59,7 @@ serve(async (req) => {
     const endDate = end_date || new Date().toISOString().split('T')[0];
 
     // ============================================
-    // REVENUE: Get ALL invoices (no filtering by cost data)
+    // REVENUE: Get ALL invoices with cost data source info
     // ============================================
     const { data: invoices, error: invoicesError } = await supabaseClient
       .from("invoices")
@@ -69,8 +72,14 @@ serve(async (req) => {
         service_type,
         status,
         total_actual_cost,
+        actual_materials_cost,
+        actual_labor_cost,
+        actual_overhead_cost,
         actual_profit,
         cost_override_by_user,
+        cost_data_source,
+        source,
+        line_items,
         blueprint_usage (
           id,
           cost_blueprints (
@@ -84,6 +93,92 @@ serve(async (req) => {
 
     if (invoicesError) {
       throw invoicesError;
+    }
+
+    // ============================================
+    // QUICKBOOKS MERGED P&L (if connected)
+    // This section overlays the QB P&L data with Mintro adjustments
+    // ============================================
+    let qbMergedPnl: any = null;
+
+    // Check if user has QB P&L data for this period
+    const { data: qbReport } = await supabaseClient
+      .from("quickbooks_pnl_reports")
+      .select("*")
+      .eq("user_id", user.id)
+      .lte("start_date", startDate)
+      .gte("end_date", endDate)
+      .order("synced_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (qbReport) {
+      // Get Mintro-only invoices (not from QB)
+      const { data: mintroOnlyInvoices } = await supabaseClient
+        .from("invoices")
+        .select("amount, total_actual_cost")
+        .eq("user_id", user.id)
+        .neq("source", "quickbooks")
+        .gte("invoice_date", startDate)
+        .lte("invoice_date", endDate);
+
+      const mintroRevenue = mintroOnlyInvoices?.reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0) || 0;
+      const mintroExpenses = mintroOnlyInvoices?.reduce((sum: number, inv: any) => sum + (Number(inv.total_actual_cost) || 0), 0) || 0;
+
+      // Get edited QB invoices (need to apply delta adjustment)
+      const { data: editedQbInvoices } = await supabaseClient
+        .from("invoices")
+        .select("amount, total_actual_cost, original_qb_amount, original_qb_cost")
+        .eq("user_id", user.id)
+        .eq("source", "quickbooks")
+        .eq("edited_after_sync", true)
+        .gte("invoice_date", startDate)
+        .lte("invoice_date", endDate);
+
+      let adjustmentRevenue = 0;
+      let adjustmentExpenses = 0;
+
+      editedQbInvoices?.forEach((inv: any) => {
+        const revDelta = (Number(inv.amount) || 0) - (Number(inv.original_qb_amount) || 0);
+        const costDelta = (Number(inv.total_actual_cost) || 0) - (Number(inv.original_qb_cost) || 0);
+        adjustmentRevenue += revDelta;
+        adjustmentExpenses += costDelta;
+      });
+
+      // Merge: QB Base + Mintro Only + Adjustments
+      const mergedRevenue = Number(qbReport.total_income || 0) + mintroRevenue + adjustmentRevenue;
+      const mergedExpenses = Number(qbReport.total_expenses || 0) + mintroExpenses + adjustmentExpenses;
+      const mergedProfit = mergedRevenue - mergedExpenses;
+
+      qbMergedPnl = {
+        enabled: true,
+        last_synced: qbReport.synced_at,
+        merged: {
+          revenue: parseFloat(mergedRevenue.toFixed(2)),
+          expenses: parseFloat(mergedExpenses.toFixed(2)),
+          profit: parseFloat(mergedProfit.toFixed(2)),
+          profit_margin: mergedRevenue > 0 ? parseFloat(((mergedProfit / mergedRevenue) * 100).toFixed(2)) : 0,
+        },
+        breakdown: {
+          quickbooks_base: {
+            revenue: Number(qbReport.total_income || 0),
+            expenses: Number(qbReport.total_expenses || 0),
+            profit: Number(qbReport.net_income || 0),
+          },
+          mintro_only: {
+            revenue: mintroRevenue,
+            expenses: mintroExpenses,
+            profit: mintroRevenue - mintroExpenses,
+            count: mintroOnlyInvoices?.length || 0,
+          },
+          adjustments: {
+            revenue: adjustmentRevenue,
+            expenses: adjustmentExpenses,
+            profit: adjustmentRevenue - adjustmentExpenses,
+            edited_invoices: editedQbInvoices?.length || 0,
+          },
+        },
+      };
     }
 
     // ============================================
@@ -187,6 +282,7 @@ serve(async (req) => {
 
     // ============================================
     // CALCULATE PROFIT FOR EACH INVOICE
+    // Uses cost_data_source to determine data quality
     // ============================================
     const invoiceCalculations = (invoices || []).map(inv => {
       const revenue = parseFloat(inv.amount || 0);
@@ -202,20 +298,30 @@ serve(async (req) => {
 
       // Check for manual override
       const hasOverride = inv.cost_override_by_user || false;
-      const overrideCost = hasOverride && inv.total_actual_cost !== null
-        ? parseFloat(inv.total_actual_cost || 0)
-        : null;
+      
+      // Get stored cost and its source
+      const storedCost = inv.total_actual_cost !== null ? parseFloat(inv.total_actual_cost || 0) : null;
+      const costSource = inv.cost_data_source || 'none';
+      
+      // Determine if this is "real" cost data (from QB Items or user verified)
+      const isRealCost = ['qb_item_cost', 'qb_expense_linked', 'user_verified'].includes(costSource);
 
-      // Determine effective cost (priority: override > transactions > stored value > 0)
+      // Determine effective cost (priority: override > stored > transactions > 0)
       let effectiveCost: number;
-      if (overrideCost !== null) {
-        effectiveCost = overrideCost;
+      let effectiveSource: string;
+      
+      if (hasOverride && storedCost !== null) {
+        effectiveCost = storedCost;
+        effectiveSource = 'user_verified';
+      } else if (storedCost !== null && costSource && costSource !== 'none') {
+        effectiveCost = storedCost;
+        effectiveSource = costSource;
       } else if (transactionCosts > 0) {
         effectiveCost = transactionCosts;
-      } else if (inv.total_actual_cost !== null) {
-        effectiveCost = parseFloat(inv.total_actual_cost || 0);
+        effectiveSource = 'transaction_linked';
       } else {
         effectiveCost = 0;
+        effectiveSource = 'none';
       }
 
       const calculatedProfit = revenue - effectiveCost;
@@ -232,8 +338,14 @@ serve(async (req) => {
         costs: {
           from_transactions: transactionCosts,
           from_blueprints: blueprintCosts > 0 ? blueprintCosts : null,
-          from_override: overrideCost,
+          from_override: hasOverride ? storedCost : null,
+          stored: storedCost,
           effective: effectiveCost,
+        },
+        cost_breakdown: {
+          materials: parseFloat(inv.actual_materials_cost || 0),
+          labor: parseFloat(inv.actual_labor_cost || 0),
+          overhead: parseFloat(inv.actual_overhead_cost || 0),
         },
         profit: {
           calculated: calculatedProfit,
@@ -241,11 +353,17 @@ serve(async (req) => {
           variance: estimatedProfit !== null ? calculatedProfit - estimatedProfit : null,
         },
         margin,
-        has_cost_data: transactionCosts > 0 || blueprintCosts > 0 || hasOverride || inv.total_actual_cost !== null,
+        has_cost_data: effectiveCost > 0 || storedCost !== null,
+        data_quality: {
+          cost_source: effectiveSource,
+          is_real_cost: isRealCost,
+          quality_level: getQualityLevel(effectiveSource),
+        },
         data_sources: {
           has_linked_transactions: transactionCosts > 0,
           has_blueprints: blueprintCosts > 0,
           has_manual_override: hasOverride,
+          has_qb_item_cost: costSource === 'qb_item_cost',
         },
       };
     });
@@ -260,6 +378,8 @@ serve(async (req) => {
     const invoicesWithTransactionCosts = invoiceCalculations.filter(c => c.data_sources.has_linked_transactions).length;
     const invoicesWithBlueprintEstimates = invoiceCalculations.filter(c => c.data_sources.has_blueprints).length;
     const invoicesWithAnyCostData = invoiceCalculations.filter(c => c.has_cost_data).length;
+    const invoicesWithRealCosts = invoiceCalculations.filter(c => c.data_quality.is_real_cost).length;
+    const invoicesWithQbItemCost = invoiceCalculations.filter(c => c.data_sources.has_qb_item_cost).length;
 
     const netProfit = totalRevenue - totalExpenses;
     const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
@@ -374,13 +494,24 @@ serve(async (req) => {
           trend: revenueChange > 0 ? "up" : revenueChange < 0 ? "down" : "flat",
         },
         data_quality: {
-          message: invoicesWithAnyCostData === 0
-            ? "No cost data available. Link bank transactions to invoices to see profit calculations."
-            : invoicesWithAnyCostData < (invoices?.length || 0)
-              ? `${invoicesWithAnyCostData} of ${invoices?.length} invoices have cost data. Link more transactions for better accuracy.`
-              : "All invoices have cost data.",
+          message: invoicesWithRealCosts > 0
+            ? `${invoicesWithRealCosts} of ${invoices?.length} invoices have real cost data from QuickBooks.`
+            : invoicesWithAnyCostData === 0
+              ? "No cost data available. Run quickbooks-full-sync to get real costs from QuickBooks Items."
+              : `${invoicesWithAnyCostData} of ${invoices?.length} invoices have estimated costs. Run quickbooks-full-sync for accurate data.`,
           invoices_missing_cost_data: (invoices?.length || 0) - invoicesWithAnyCostData,
+          invoices_with_real_costs: invoicesWithRealCosts,
+          invoices_with_qb_item_cost: invoicesWithQbItemCost,
+          real_cost_percentage: invoices?.length ? parseFloat(((invoicesWithRealCosts / invoices.length) * 100).toFixed(1)) : 0,
+          recommendation: invoicesWithQbItemCost === 0
+            ? "Run quickbooks-full-sync to sync Items with PurchaseCost for accurate profit tracking."
+            : invoicesWithRealCosts < (invoices?.length || 0) * 0.5
+              ? "Add PurchaseCost to more QuickBooks Items for better accuracy."
+              : "Good coverage of real cost data!",
         },
+        // QuickBooks Merged P&L - only present if user has synced QB P&L data
+        // Frontend should prefer this for headline numbers when available
+        quickbooks_merged_pnl: qbMergedPnl,
       }),
       {
         status: 200,
@@ -395,3 +526,25 @@ serve(async (req) => {
     );
   }
 });
+
+/**
+ * Get quality level for a cost source
+ */
+function getQualityLevel(costSource: string): string {
+  switch (costSource) {
+    case "qb_item_cost":
+    case "qb_expense_linked":
+      return "excellent";
+    case "user_verified":
+    case "transaction_linked":
+      return "good";
+    case "blueprint_linked":
+    case "chart_of_accounts":
+      return "fair";
+    case "estimated":
+    case "keyword_fallback":
+      return "poor";
+    default:
+      return "none";
+  }
+}

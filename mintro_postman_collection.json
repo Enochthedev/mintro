@@ -1,63 +1,26 @@
-{
-  "info": {
-    "name": "Mintro API",
-    "description": "Complete Mintro API documentation covering all Edge Functions. Professional collection for frontend integration and testing.\n\n## Getting Started\n1. Set the ANON_KEY variable to your Supabase anon key\n2. Use the Authentication endpoints to get an ACCESS_TOKEN\n3. Set the ACCESS_TOKEN variable\n4. You're ready to use all other endpoints!",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-  },
-  "variable": [
-    {
-      "key": "PROJECT_URL",
-      "value": "https://kquthqdlixwoxzpyijcp.supabase.co",
-      "type": "string"
-    },
-    {
-      "key": "ANON_KEY",
-      "value": "YOUR_SUPABASE_ANON_KEY",
-      "type": "string"
-    },
-    {
-      "key": "ACCESS_TOKEN",
-      "value": "YOUR_USER_ACCESS_TOKEN",
-      "type": "string"
-    }
-  ],
-  "item": [
-    {
-      "name": "🔐 Authentication",
-      "description": "Authentication endpoints using Supabase Auth. Get tokens to use with other API calls.",
-      "item": [
-        {
-          "name": "Sign In with Password",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "apikey",
-                "value": "{{ANON_KEY}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{PROJECT_URL}}/auth/v1/token?grant_type=password",
-              "host": [
-                "{{PROJECT_URL}}"
-              ],
-              "path": [
-                "auth",
-                "v1",
-                "token"
-              ],
-              "query": [
-                {
-                  "key": "grant_type",
-                  "value": "password"
-                }
-              ]
-            },
-            "description": "Sign in with email and password. Returns access_token and refresh_token. Use the access_token in the Authorization header for subsequent API calls.",
+/Users/user/.npm/_npx/1bf7c3c15bf47d04/node_modules/ts-node/src/index.ts:859
+    return new TSError(diagnosticText, diagnosticCodes, diagnostics);
+           ^
+TSError: ⨯ Unable to compile TypeScript:
+postman_generator/index.ts(4,44): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+postman_generator/index.ts(5,42): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+postman_generator/index.ts(6,42): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+postman_generator/index.ts(7,40): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+postman_generator/index.ts(8,37): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+
+    at createTSError (/Users/user/.npm/_npx/1bf7c3c15bf47d04/node_modules/ts-node/src/index.ts:859:12)
+    at reportTSError (/Users/user/.npm/_npx/1bf7c3c15bf47d04/node_modules/ts-node/src/index.ts:863:19)
+    at getOutput (/Users/user/.npm/_npx/1bf7c3c15bf47d04/node_modules/ts-node/src/index.ts:1077:36)
+    at Object.compile (/Users/user/.npm/_npx/1bf7c3c15bf47d04/node_modules/ts-node/src/index.ts:1433:41)
+    at Module.m._compile (/Users/user/.npm/_npx/1bf7c3c15bf47d04/node_modules/ts-node/src/index.ts:1617:30)
+    at node:internal/modules/cjs/loader:1839:10
+    at Object.require.extensions.<computed> [as .ts] (/Users/user/.npm/_npx/1bf7c3c15bf47d04/node_modules/ts-node/src/index.ts:1621:12)
+    at Module.load (node:internal/modules/cjs/loader:1441:32)
+    at Function._load (node:internal/modules/cjs/loader:1263:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14) {
+  diagnosticCodes: [ 5097, 5097, 5097, 5097, 5097 ]
+}
+h email and password. Returns access_token and refresh_token. Use the access_token in the Authorization header for subsequent API calls.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"your-email@example.com\",\n  \"password\": \"your-password\"\n}",
@@ -4311,6 +4274,101 @@
           ]
         },
         {
+          "name": "⭐ Get Accurate Profitability (QB)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{PROJECT_URL}}/functions/v1/get-accurate-profitability",
+              "host": [
+                "{{PROJECT_URL}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "get-accurate-profitability"
+              ],
+              "query": [
+                {
+                  "key": "start_date",
+                  "value": "2026-01-01",
+                  "disabled": false,
+                  "description": "Start date (YYYY-MM-DD)"
+                },
+                {
+                  "key": "end_date",
+                  "value": "2026-12-31",
+                  "disabled": false,
+                  "description": "End date (YYYY-MM-DD)"
+                }
+              ]
+            },
+            "description": "🎯 BEST FOR QB USERS! Returns ACCURATE profit using QuickBooks Item.PurchaseCost. Shows data quality indicators so you know which invoices have real vs estimated costs. Run quickbooks-full-sync first!"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{ACCESS_TOKEN}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{PROJECT_URL}}/functions/v1/get-accurate-profitability",
+                  "host": [
+                    "{{PROJECT_URL}}"
+                  ],
+                  "path": [
+                    "functions",
+                    "v1",
+                    "get-accurate-profitability"
+                  ],
+                  "query": [
+                    {
+                      "key": "start_date",
+                      "value": "2026-01-01",
+                      "disabled": false,
+                      "description": "Start date (YYYY-MM-DD)"
+                    },
+                    {
+                      "key": "end_date",
+                      "value": "2026-12-31",
+                      "disabled": false,
+                      "description": "End date (YYYY-MM-DD)"
+                    }
+                  ]
+                },
+                "description": "🎯 BEST FOR QB USERS! Returns ACCURATE profit using QuickBooks Item.PurchaseCost. Shows data quality indicators so you know which invoices have real vs estimated costs. Run quickbooks-full-sync first!"
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"period\": {\n    \"start_date\": \"2026-01-01\",\n    \"end_date\": \"2026-12-31\"\n  },\n  \"summary\": {\n    \"total_revenue\": 45000,\n    \"total_cost\": 22500,\n    \"total_profit\": 22500,\n    \"profit_margin\": 50,\n    \"invoice_count\": 25\n  },\n  \"bank_transactions\": {\n    \"total_expenses\": 18000,\n    \"total_income\": 5000,\n    \"transaction_count\": 186\n  },\n  \"data_quality\": {\n    \"level\": \"good\",\n    \"message\": \"18 of 25 invoices have real cost data from QuickBooks.\",\n    \"real_cost_percentage\": 72,\n    \"by_quality\": {\n      \"real_cost\": 18,\n      \"estimated\": 5,\n      \"no_cost\": 2\n    },\n    \"by_cost_source\": {\n      \"qb_item_cost\": 18,\n      \"estimated\": 5,\n      \"none\": 2\n    }\n  },\n  \"service_type_breakdown\": [\n    {\n      \"service_type\": \"Landscaping\",\n      \"revenue\": 25000,\n      \"cost\": 12500,\n      \"profit\": 12500,\n      \"margin\": 50,\n      \"invoice_count\": 15,\n      \"real_cost_count\": 12\n    }\n  ],\n  \"invoices\": [\n    {\n      \"invoice_id\": \"uuid\",\n      \"invoice_number\": \"INV-0001\",\n      \"client\": \"Cool Cars\",\n      \"financials\": {\n        \"revenue\": 2194,\n        \"cost\": 1239.37,\n        \"profit\": 954.63,\n        \"margin\": 43.51\n      },\n      \"data_quality\": {\n        \"cost_source\": \"qb_item_cost\",\n        \"quality_level\": \"excellent\",\n        \"is_real_cost\": true\n      }\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
           "name": "Get Business Profitability",
           "request": {
             "method": "GET",
@@ -6026,6 +6084,91 @@
                 }
               ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Synced 45 accounts from QuickBooks\",\n  \"synced\": 45,\n  \"category_breakdown\": {\n    \"expense\": 12,\n    \"cogs\": 5,\n    \"revenue\": 8,\n    \"transfer\": 4,\n    \"exclude\": 10,\n    \"other\": 6\n  },\n  \"account_types_found\": {\n    \"Cost of Goods Sold\": 5,\n    \"Expense\": 10,\n    \"Other Expense\": 2,\n    \"Income\": 6,\n    \"Other Income\": 2,\n    \"Bank\": 3,\n    \"Credit Card\": 1,\n    \"Loan\": 2,\n    \"Equity\": 4,\n    \"Accounts Receivable\": 1,\n    \"Accounts Payable\": 1,\n    \"Other Current Asset\": 3,\n    \"Fixed Asset\": 5\n  },\n  \"excluded_from_costs\": {\n    \"bank_accounts\": [\n      \"Business Checking\",\n      \"Business Savings\",\n      \"Petty Cash\"\n    ],\n    \"credit_cards\": [\n      \"Business Credit Card\"\n    ],\n    \"loans\": [\n      \"Equipment Loan\",\n      \"Business Loan\"\n    ],\n    \"equity\": [\n      \"Owner's Equity\",\n      \"Retained Earnings\",\n      \"Owner's Draw\",\n      \"Owner's Investment\"\n    ]\n  },\n  \"usage_tip\": \"Bank/CC accounts can be mapped to connected Plaid accounts. Use excluded_from_costs to identify potential matches.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "⭐ Full Sync (RECOMMENDED)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{PROJECT_URL}}/functions/v1/quickbooks-full-sync",
+              "host": [
+                "{{PROJECT_URL}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "quickbooks-full-sync"
+              ]
+            },
+            "description": "🚀 BEST ENDPOINT FOR ACCURATE PROFITS! Syncs Items with PurchaseCost FIRST, then calculates REAL costs per invoice using Item.PurchaseCost × Quantity. Use this instead of quickbooks-sync-all for accurate profit tracking.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{ACCESS_TOKEN}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{PROJECT_URL}}/functions/v1/quickbooks-full-sync",
+                  "host": [
+                    "{{PROJECT_URL}}"
+                  ],
+                  "path": [
+                    "functions",
+                    "v1",
+                    "quickbooks-full-sync"
+                  ]
+                },
+                "description": "🚀 BEST ENDPOINT FOR ACCURATE PROFITS! Syncs Items with PurchaseCost FIRST, then calculates REAL costs per invoice using Item.PurchaseCost × Quantity. Use this instead of quickbooks-sync-all for accurate profit tracking.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Full sync complete! 32 items, 45 accounts, 25 invoices, 48 expenses\",\n  \"results\": {\n    \"items\": {\n      \"synced\": 32,\n      \"with_cost\": 18,\n      \"errors\": []\n    },\n    \"accounts\": {\n      \"synced\": 45,\n      \"errors\": []\n    },\n    \"invoices\": {\n      \"synced\": 20,\n      \"updated\": 5,\n      \"errors\": []\n    },\n    \"expenses\": {\n      \"purchases\": 30,\n      \"bills\": 18,\n      \"errors\": []\n    },\n    \"cost_calculation\": {\n      \"invoices_with_real_costs\": 18,\n      \"total_revenue\": 45000,\n      \"total_cost\": 22500\n    }\n  },\n  \"profitability_summary\": {\n    \"total_revenue\": 45000,\n    \"total_cost\": 22500,\n    \"total_profit\": 22500,\n    \"profit_margin\": 50,\n    \"invoices_with_real_costs\": 18,\n    \"items_with_purchase_cost\": 18\n  },\n  \"data_quality\": {\n    \"items_with_cost_percentage\": 56.25,\n    \"invoices_with_real_cost_percentage\": 72,\n    \"recommendation\": \"Good coverage of item costs!\"\n  }\n}"
             }
           ]
         },
