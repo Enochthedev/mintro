@@ -1,90 +1,90 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
+import { createClient } from "jsr:@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Authorization, authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS, PUT, DELETE",
   "Access-Control-Allow-Credentials": "true",
-  "Access-Control-Max-Age": "86400",
+  "Access-Control-Max-Age": "86400"
 };
-
-serve(async (req) => {
+serve(async (req)=>{
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, {
+      headers: corsHeaders
+    });
   }
-
   try {
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      {
-        global: {
-          headers: { Authorization: req.headers.get("Authorization")! },
-        },
+    const supabaseClient = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
+      global: {
+        headers: {
+          Authorization: req.headers.get("Authorization")
+        }
       }
-    );
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabaseClient.auth.getUser();
-
+    });
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({
+        error: "Unauthorized"
+      }), {
+        status: 401,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
     }
-
     const { inventory_item_id } = await req.json();
-
     if (!inventory_item_id) {
-      return new Response(
-        JSON.stringify({ error: "inventory_item_id is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({
+        error: "inventory_item_id is required"
+      }), {
+        status: 400,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
     }
-
     // Reactivate the item
-    const { data: updated, error: updateError } = await supabaseClient
-      .from("inventory_items")
-      .update({
-        is_active: true,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", inventory_item_id)
-      .eq("user_id", user.id)
-      .select()
-      .single();
-
+    const { data: updated, error: updateError } = await supabaseClient.from("inventory_items").update({
+      is_active: true,
+      updated_at: new Date().toISOString()
+    }).eq("id", inventory_item_id).eq("user_id", user.id).select().single();
     if (updateError) {
       throw updateError;
     }
-
     if (!updated) {
-      return new Response(
-        JSON.stringify({ error: "Inventory item not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({
+        error: "Inventory item not found"
+      }), {
+        status: 404,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
     }
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: "Inventory item reactivated",
-        item: updated,
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return new Response(JSON.stringify({
+      success: true,
+      message: "Inventory item reactivated",
+      item: updated
+    }), {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json"
       }
-    );
-  } catch (error: any) {
+    });
+  } catch (error) {
     console.error("Error:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({
+      error: error.message
+    }), {
+      status: 500,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json"
+      }
+    });
   }
 });

@@ -1,26 +1,63 @@
-/Users/user/.npm/_npx/1bf7c3c15bf47d04/node_modules/ts-node/src/index.ts:859
-    return new TSError(diagnosticText, diagnosticCodes, diagnostics);
-           ^
-TSError: ⨯ Unable to compile TypeScript:
-postman_generator/index.ts(4,44): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
-postman_generator/index.ts(5,42): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
-postman_generator/index.ts(6,42): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
-postman_generator/index.ts(7,40): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
-postman_generator/index.ts(8,37): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
-
-    at createTSError (/Users/user/.npm/_npx/1bf7c3c15bf47d04/node_modules/ts-node/src/index.ts:859:12)
-    at reportTSError (/Users/user/.npm/_npx/1bf7c3c15bf47d04/node_modules/ts-node/src/index.ts:863:19)
-    at getOutput (/Users/user/.npm/_npx/1bf7c3c15bf47d04/node_modules/ts-node/src/index.ts:1077:36)
-    at Object.compile (/Users/user/.npm/_npx/1bf7c3c15bf47d04/node_modules/ts-node/src/index.ts:1433:41)
-    at Module.m._compile (/Users/user/.npm/_npx/1bf7c3c15bf47d04/node_modules/ts-node/src/index.ts:1617:30)
-    at node:internal/modules/cjs/loader:1839:10
-    at Object.require.extensions.<computed> [as .ts] (/Users/user/.npm/_npx/1bf7c3c15bf47d04/node_modules/ts-node/src/index.ts:1621:12)
-    at Module.load (node:internal/modules/cjs/loader:1441:32)
-    at Function._load (node:internal/modules/cjs/loader:1263:12)
-    at TracingChannel.traceSync (node:diagnostics_channel:328:14) {
-  diagnosticCodes: [ 5097, 5097, 5097, 5097, 5097 ]
-}
-h email and password. Returns access_token and refresh_token. Use the access_token in the Authorization header for subsequent API calls.",
+{
+  "info": {
+    "name": "Mintro API",
+    "description": "Complete Mintro API documentation covering all Edge Functions. Professional collection for frontend integration and testing.\n\n## Getting Started\n1. Set the ANON_KEY variable to your Supabase anon key\n2. Use the Authentication endpoints to get an ACCESS_TOKEN\n3. Set the ACCESS_TOKEN variable\n4. You're ready to use all other endpoints!",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "PROJECT_URL",
+      "value": "https://kquthqdlixwoxzpyijcp.supabase.co",
+      "type": "string"
+    },
+    {
+      "key": "ANON_KEY",
+      "value": "YOUR_SUPABASE_ANON_KEY",
+      "type": "string"
+    },
+    {
+      "key": "ACCESS_TOKEN",
+      "value": "YOUR_USER_ACCESS_TOKEN",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Authentication",
+      "description": "Authentication endpoints using Supabase Auth. Get tokens to use with other API calls.",
+      "item": [
+        {
+          "name": "Sign In with Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{ANON_KEY}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{PROJECT_URL}}/auth/v1/token?grant_type=password",
+              "host": [
+                "{{PROJECT_URL}}"
+              ],
+              "path": [
+                "auth",
+                "v1",
+                "token"
+              ],
+              "query": [
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                }
+              ]
+            },
+            "description": "Sign in with email and password. Returns access_token and refresh_token. Use the access_token in the Authorization header for subsequent API calls.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"your-email@example.com\",\n  \"password\": \"your-password\"\n}",
@@ -5137,6 +5174,386 @@ h email and password. Returns access_token and refresh_token. Use the access_tok
                 }
               ],
               "body": "{\n  \"success\": true,\n  \"changes\": [\n    {\n      \"vendor\": \"Home Depot\",\n      \"item\": \"2x4 Lumber\",\n      \"old_price\": 5.99,\n      \"new_price\": 6.49,\n      \"change_pct\": 8.3,\n      \"detected_date\": \"2025-11-01\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "🔵 Get QuickBooks P&L (Pure)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{PROJECT_URL}}/functions/v1/get-quickbooks-profitability",
+              "host": [
+                "{{PROJECT_URL}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "get-quickbooks-profitability"
+              ],
+              "query": [
+                {
+                  "key": "start_date",
+                  "value": "2026-01-01",
+                  "disabled": false,
+                  "description": "Start date (YYYY-MM-DD)"
+                },
+                {
+                  "key": "end_date",
+                  "value": "2026-12-31",
+                  "disabled": false,
+                  "description": "End date (YYYY-MM-DD)"
+                }
+              ]
+            },
+            "description": "📊 PURE QB P&L! Returns official QuickBooks Profit & Loss report numbers. This is what your accountant sees. Run quickbooks-sync-pnl first to get latest data."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{ACCESS_TOKEN}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{PROJECT_URL}}/functions/v1/get-quickbooks-profitability",
+                  "host": [
+                    "{{PROJECT_URL}}"
+                  ],
+                  "path": [
+                    "functions",
+                    "v1",
+                    "get-quickbooks-profitability"
+                  ],
+                  "query": [
+                    {
+                      "key": "start_date",
+                      "value": "2026-01-01",
+                      "disabled": false,
+                      "description": "Start date (YYYY-MM-DD)"
+                    },
+                    {
+                      "key": "end_date",
+                      "value": "2026-12-31",
+                      "disabled": false,
+                      "description": "End date (YYYY-MM-DD)"
+                    }
+                  ]
+                },
+                "description": "📊 PURE QB P&L! Returns official QuickBooks Profit & Loss report numbers. This is what your accountant sees. Run quickbooks-sync-pnl first to get latest data."
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"source\": \"quickbooks_pnl\",\n  \"period\": {\n    \"start_date\": \"2026-01-01\",\n    \"end_date\": \"2026-12-31\"\n  },\n  \"pnl\": {\n    \"total_income\": 45000,\n    \"total_cogs\": 18000,\n    \"gross_profit\": 27000,\n    \"total_expenses\": 12000,\n    \"net_operating_income\": 15000,\n    \"other_income\": 500,\n    \"other_expenses\": 200,\n    \"net_income\": 15300\n  },\n  \"metrics\": {\n    \"gross_margin\": 60,\n    \"net_margin\": 34,\n    \"expense_ratio\": 26.67\n  },\n  \"last_synced\": \"2026-01-22T10:30:00Z\",\n  \"note\": \"These are official QuickBooks P&L numbers. Run quickbooks-sync-pnl to refresh.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "🟢 Get Combined Profitability (RECOMMENDED)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{PROJECT_URL}}/functions/v1/get-combined-profitability",
+              "host": [
+                "{{PROJECT_URL}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "get-combined-profitability"
+              ],
+              "query": [
+                {
+                  "key": "start_date",
+                  "value": "2026-01-01",
+                  "disabled": false,
+                  "description": "Start date (YYYY-MM-DD)"
+                },
+                {
+                  "key": "end_date",
+                  "value": "2026-12-31",
+                  "disabled": false,
+                  "description": "End date (YYYY-MM-DD)"
+                }
+              ]
+            },
+            "description": "⭐ BEST FOR MOST USERS! Uses QB P&L as source of truth + adds Mintro-only invoices (those not synced to QB). Gives you complete picture without double-counting."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{ACCESS_TOKEN}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{PROJECT_URL}}/functions/v1/get-combined-profitability",
+                  "host": [
+                    "{{PROJECT_URL}}"
+                  ],
+                  "path": [
+                    "functions",
+                    "v1",
+                    "get-combined-profitability"
+                  ],
+                  "query": [
+                    {
+                      "key": "start_date",
+                      "value": "2026-01-01",
+                      "disabled": false,
+                      "description": "Start date (YYYY-MM-DD)"
+                    },
+                    {
+                      "key": "end_date",
+                      "value": "2026-12-31",
+                      "disabled": false,
+                      "description": "End date (YYYY-MM-DD)"
+                    }
+                  ]
+                },
+                "description": "⭐ BEST FOR MOST USERS! Uses QB P&L as source of truth + adds Mintro-only invoices (those not synced to QB). Gives you complete picture without double-counting."
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"source\": \"combined\",\n  \"period\": {\n    \"start_date\": \"2026-01-01\",\n    \"end_date\": \"2026-12-31\"\n  },\n  \"quickbooks_pnl\": {\n    \"total_income\": 45000,\n    \"total_cogs\": 18000,\n    \"gross_profit\": 27000,\n    \"total_expenses\": 12000,\n    \"net_income\": 15300\n  },\n  \"mintro_only_invoices\": {\n    \"count\": 5,\n    \"total_revenue\": 8500,\n    \"total_cost\": 4200,\n    \"total_profit\": 4300,\n    \"invoices\": [\n      {\n        \"id\": \"uuid\",\n        \"invoice_number\": \"MINTRO-001\",\n        \"client\": \"Local Client\",\n        \"amount\": 2500,\n        \"cost\": 1200,\n        \"profit\": 1300\n      }\n    ]\n  },\n  \"combined_totals\": {\n    \"total_revenue\": 53500,\n    \"total_cost\": 34200,\n    \"total_profit\": 19600,\n    \"gross_margin\": 36.64\n  },\n  \"data_sources\": {\n    \"qb_pnl_synced\": \"2026-01-22T10:30:00Z\",\n    \"mintro_invoices_included\": 5,\n    \"note\": \"QB P&L is source of truth. Mintro-only invoices (no quickbooks_id) are added on top.\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "🟡 Get Merged Profitability (Comparison)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{PROJECT_URL}}/functions/v1/get-merged-profitability",
+              "host": [
+                "{{PROJECT_URL}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "get-merged-profitability"
+              ],
+              "query": [
+                {
+                  "key": "start_date",
+                  "value": "2026-01-01",
+                  "disabled": false,
+                  "description": "Start date (YYYY-MM-DD)"
+                },
+                {
+                  "key": "end_date",
+                  "value": "2026-12-31",
+                  "disabled": false,
+                  "description": "End date (YYYY-MM-DD)"
+                }
+              ]
+            },
+            "description": "📊 SIDE-BY-SIDE COMPARISON! Shows both QB P&L numbers AND Mintro-calculated numbers. Useful for understanding why they differ and which to use when."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{ACCESS_TOKEN}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{PROJECT_URL}}/functions/v1/get-merged-profitability",
+                  "host": [
+                    "{{PROJECT_URL}}"
+                  ],
+                  "path": [
+                    "functions",
+                    "v1",
+                    "get-merged-profitability"
+                  ],
+                  "query": [
+                    {
+                      "key": "start_date",
+                      "value": "2026-01-01",
+                      "disabled": false,
+                      "description": "Start date (YYYY-MM-DD)"
+                    },
+                    {
+                      "key": "end_date",
+                      "value": "2026-12-31",
+                      "disabled": false,
+                      "description": "End date (YYYY-MM-DD)"
+                    }
+                  ]
+                },
+                "description": "📊 SIDE-BY-SIDE COMPARISON! Shows both QB P&L numbers AND Mintro-calculated numbers. Useful for understanding why they differ and which to use when."
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"source\": \"merged_comparison\",\n  \"period\": {\n    \"start_date\": \"2026-01-01\",\n    \"end_date\": \"2026-12-31\"\n  },\n  \"quickbooks_official\": {\n    \"source\": \"QB P&L Report\",\n    \"total_income\": 45000,\n    \"total_cogs\": 18000,\n    \"gross_profit\": 27000,\n    \"total_expenses\": 12000,\n    \"net_income\": 15300,\n    \"gross_margin\": 60\n  },\n  \"mintro_calculated\": {\n    \"source\": \"Item.PurchaseCost × Qty\",\n    \"total_revenue\": 45000,\n    \"total_cost\": 22500,\n    \"total_profit\": 22500,\n    \"profit_margin\": 50,\n    \"invoices_with_real_cost\": 18,\n    \"total_invoices\": 25\n  },\n  \"comparison\": {\n    \"revenue_match\": true,\n    \"cost_difference\": 4500,\n    \"profit_difference\": -7200,\n    \"explanation\": \"QB COGS only includes items posted to COGS accounts. Mintro calculates from Item.PurchaseCost which may include items not yet in COGS.\"\n  },\n  \"recommendation\": \"Use QB P&L for official reporting. Use Mintro calculated for per-job profitability analysis.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Sync QuickBooks P&L Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{PROJECT_URL}}/functions/v1/quickbooks-sync-pnl",
+              "host": [
+                "{{PROJECT_URL}}"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "quickbooks-sync-pnl"
+              ],
+              "query": [
+                {
+                  "key": "start_date",
+                  "value": "2026-01-01",
+                  "disabled": true,
+                  "description": "Start date (optional, defaults to fiscal year)"
+                },
+                {
+                  "key": "end_date",
+                  "value": "2026-12-31",
+                  "disabled": true,
+                  "description": "End date (optional, defaults to today)"
+                }
+              ]
+            },
+            "description": "🔄 SYNC QB P&L! Fetches the official Profit & Loss report from QuickBooks and stores it. Run this before using get-quickbooks-profitability or get-combined-profitability."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{ACCESS_TOKEN}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{PROJECT_URL}}/functions/v1/quickbooks-sync-pnl",
+                  "host": [
+                    "{{PROJECT_URL}}"
+                  ],
+                  "path": [
+                    "functions",
+                    "v1",
+                    "quickbooks-sync-pnl"
+                  ],
+                  "query": [
+                    {
+                      "key": "start_date",
+                      "value": "2026-01-01",
+                      "disabled": true,
+                      "description": "Start date (optional, defaults to fiscal year)"
+                    },
+                    {
+                      "key": "end_date",
+                      "value": "2026-12-31",
+                      "disabled": true,
+                      "description": "End date (optional, defaults to today)"
+                    }
+                  ]
+                },
+                "description": "🔄 SYNC QB P&L! Fetches the official Profit & Loss report from QuickBooks and stores it. Run this before using get-quickbooks-profitability or get-combined-profitability."
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"P&L report synced successfully\",\n  \"period\": {\n    \"start_date\": \"2026-01-01\",\n    \"end_date\": \"2026-01-22\"\n  },\n  \"pnl_summary\": {\n    \"total_income\": 45000,\n    \"total_cogs\": 18000,\n    \"gross_profit\": 27000,\n    \"total_expenses\": 12000,\n    \"net_operating_income\": 15000,\n    \"net_income\": 15300\n  },\n  \"sections_synced\": [\n    \"Income\",\n    \"Cost of Goods Sold\",\n    \"Expenses\",\n    \"Other Income\",\n    \"Other Expenses\"\n  ],\n  \"line_items_stored\": 45\n}"
             }
           ]
         }

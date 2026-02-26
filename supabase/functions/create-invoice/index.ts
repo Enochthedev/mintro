@@ -4,7 +4,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS"
 };
-Deno.serve(async (req) => {
+Deno.serve(async (req)=>{
   if (req.method === "OPTIONS") {
     return new Response(null, {
       headers: corsHeaders
@@ -31,9 +31,8 @@ Deno.serve(async (req) => {
         }
       });
     }
-    const payload = await req.json().catch(() => ({}));
+    const payload = await req.json().catch(()=>({}));
     const { client, amount, status = "draft", due_date, invoice_date, service_type, notes, tags, items, blueprint_ids, blueprint_usages, transaction_ids, auto_calculate_from_blueprints = false } = payload;
-
     if (!client || amount === undefined && !auto_calculate_from_blueprints) {
       return new Response(JSON.stringify({
         error: "client and amount are required (or provide blueprint_ids with auto_calculate_from_blueprints=true)"
@@ -45,10 +44,8 @@ Deno.serve(async (req) => {
         }
       });
     }
-
     let calculatedAmount = amount;
     let blueprints = [];
-
     // Determine which IDs to fetch
     // Support both 'blueprint_usages' (with overrides) and 'blueprint_ids' (all blueprints)
     // Frontend may send:
@@ -56,20 +53,16 @@ Deno.serve(async (req) => {
     //   - blueprint_usages: ONLY blueprints with overrides (e.g., [{ blueprint_id: "bp-2", actual_sale_price: 9999 }])
     // We need to fetch ALL unique IDs from both sources
     let idsToFetch = [];
-    const usageIds = blueprint_usages && Array.isArray(blueprint_usages) && blueprint_usages.length > 0
-      ? blueprint_usages.map((b: any) => b.blueprint_id)
-      : [];
-    const directIds = blueprint_ids && Array.isArray(blueprint_ids) && blueprint_ids.length > 0
-      ? blueprint_ids
-      : [];
-
+    const usageIds = blueprint_usages && Array.isArray(blueprint_usages) && blueprint_usages.length > 0 ? blueprint_usages.map((b)=>b.blueprint_id) : [];
+    const directIds = blueprint_ids && Array.isArray(blueprint_ids) && blueprint_ids.length > 0 ? blueprint_ids : [];
     // Merge and deduplicate IDs from both sources
-    idsToFetch = Array.from(new Set([...usageIds, ...directIds]));
-
+    idsToFetch = Array.from(new Set([
+      ...usageIds,
+      ...directIds
+    ]));
     if (idsToFetch.length > 0) {
       const { data: fetchedBlueprints, error: blueprintError } = await supabaseClient.from("cost_blueprints").select("*").eq("user_id", user.id).in("id", idsToFetch);
       if (blueprintError) throw blueprintError;
-
       if (!fetchedBlueprints || fetchedBlueprints.length !== idsToFetch.length) {
         return new Response(JSON.stringify({
           error: "One or more blueprints not found"
@@ -81,12 +74,10 @@ Deno.serve(async (req) => {
           }
         });
       }
-
       // Merge fetched blueprints with overrides from input
-      blueprints = fetchedBlueprints.map(dbBp => {
+      blueprints = fetchedBlueprints.map((dbBp)=>{
         // Find matching input usage if it exists
-        const inputUsage = blueprint_usages?.find((b: any) => b.blueprint_id === dbBp.id);
-
+        const inputUsage = blueprint_usages?.find((b)=>b.blueprint_id === dbBp.id);
         if (inputUsage) {
           // Apply overrides if present (using standard field names)
           return {
@@ -99,9 +90,8 @@ Deno.serve(async (req) => {
         }
         return dbBp;
       });
-
       if (auto_calculate_from_blueprints) {
-        calculatedAmount = blueprints.reduce((sum, bp) => {
+        calculatedAmount = blueprints.reduce((sum, bp)=>{
           const val = bp?.target_sale_price ?? 0;
           const n = typeof val === "number" ? val : parseFloat(String(val)) || 0;
           return sum + n;
@@ -122,10 +112,8 @@ Deno.serve(async (req) => {
     }).select().single();
     if (invoiceError) throw invoiceError;
     if (!invoice) throw new Error("Failed to create invoice");
-
     // Track whether we have blueprints (regardless of auto_calculate flag)
     const hasBlueprints = blueprints && blueprints.length > 0;
-
     // Calculate total from line items if provided
     // LOGIC UPDATE:
     // 1. Invoice Amount = Blueprints Sale Price + ALL Line Items (Revenue AND Expenses)
@@ -133,17 +121,15 @@ Deno.serve(async (req) => {
     let finalAmount = calculatedAmount;
     let lineItemRevenue = 0;
     let lineItemCosts = 0;
-
     if (items && Array.isArray(items) && items.length > 0) {
       // Validate override_split if present
-      for (const item of items) {
+      for (const item of items){
         if (item.override_split) {
           const itemTotal = (item.qty ?? 1) * (item.unit_price ?? 0);
           const splitIncome = parseFloat(item.override_split.income || 0);
           const splitCost = parseFloat(item.override_split.cost || 0);
-
           // Validation: income + cost must equal the line item total
-          if (Math.abs((splitIncome + splitCost) - itemTotal) > 0.01) {
+          if (Math.abs(splitIncome + splitCost - itemTotal) > 0.01) {
             return new Response(JSON.stringify({
               error: `Invalid override_split for "${item.description}": income + cost (${splitIncome + splitCost}) must equal item total (${itemTotal})`,
               details: {
@@ -162,12 +148,10 @@ Deno.serve(async (req) => {
           }
         }
       }
-
-      const itemsToInsert = items.map((item) => {
+      const itemsToInsert = items.map((item)=>{
         // Only allow override_split if category is "revenue"
         const isRevenueCategory = item.category?.toLowerCase() === 'revenue';
         const hasValidOverride = item.override_split && isRevenueCategory;
-        
         return {
           invoice_id: invoice.id,
           description: item.description,
@@ -177,7 +161,7 @@ Deno.serve(async (req) => {
           // Only add override columns if override_split is provided AND category is "revenue"
           override_income: hasValidOverride ? parseFloat(item.override_split.income || 0) : null,
           override_cost: hasValidOverride ? parseFloat(item.override_split.cost || 0) : null,
-          is_override: hasValidOverride ? true : false,
+          is_override: hasValidOverride ? true : false
         };
       });
       const { error: itemsError } = await supabaseClient.from("invoice_items").insert(itemsToInsert);
@@ -186,9 +170,8 @@ Deno.serve(async (req) => {
       } else {
         // Separate line items for cost tracking
         // NEW LOGIC: Use override_cost if present, otherwise use category-based logic
-        items.forEach((item, index) => {
+        items.forEach((item, index)=>{
           const itemTotal = (item.qty ?? 1) * (item.unit_price ?? 0);
-
           if (item.override_split) {
             // Use manual override
             lineItemRevenue += parseFloat(item.override_split.income || 0);
@@ -201,13 +184,11 @@ Deno.serve(async (req) => {
             lineItemCosts += itemTotal;
           }
         });
-
         // Calculate total of ALL line items for the Invoice Amount
         const allLineItemsTotal = lineItemRevenue + lineItemCosts;
-
         // Calculate final invoice amount
         if (hasBlueprints && blueprints.length > 0) {
-          const blueprintTotal = blueprints.reduce((sum, bp) => {
+          const blueprintTotal = blueprints.reduce((sum, bp)=>{
             const val = bp?.target_sale_price ?? 0;
             const n = typeof val === "number" ? val : parseFloat(String(val)) || 0;
             return sum + n;
@@ -218,13 +199,10 @@ Deno.serve(async (req) => {
           // No blueprints: ALL line items
           finalAmount = allLineItemsTotal > 0 ? allLineItemsTotal : calculatedAmount;
         }
-
         // Update the invoice amount to reflect the calculated total
-        const { error: updateAmountError } = await supabaseClient
-          .from("invoices")
-          .update({ amount: finalAmount })
-          .eq("id", invoice.id);
-
+        const { error: updateAmountError } = await supabaseClient.from("invoices").update({
+          amount: finalAmount
+        }).eq("id", invoice.id);
         if (updateAmountError) {
           console.error("Error updating invoice amount:", updateAmountError);
         }
@@ -234,11 +212,10 @@ Deno.serve(async (req) => {
     let blueprintTotalCost = 0;
     if (blueprints.length > 0) {
       console.log(`Processing ${blueprints.length} blueprints for invoice ${invoice.id}`);
-      const usagesToCreate = blueprints.map((bp) => {
+      const usagesToCreate = blueprints.map((bp)=>{
         const estMaterialsCost = parseFloat(bp.estimated_materials_cost || 0);
         const estLaborCost = parseFloat(bp.estimated_labor_cost || 0);
         const estOverheadCost = parseFloat(bp.estimated_overhead_cost || 0);
-
         return {
           user_id: user.id,
           blueprint_id: bp.id,
@@ -254,14 +231,12 @@ Deno.serve(async (req) => {
           notes: `Created with invoice ${invoice.invoice}`
         };
       });
-
       // Calculate total cost from all blueprints for the invoice-level calculation
       // (blueprint_usage records will have their own generated total_actual_cost)
-      blueprintTotalCost = usagesToCreate.reduce((sum, usage) => {
+      blueprintTotalCost = usagesToCreate.reduce((sum, usage)=>{
         return sum + usage.actual_materials_cost + usage.actual_labor_cost + usage.actual_overhead_cost;
       }, 0);
       console.log(`Blueprint total cost: ${blueprintTotalCost}`);
-
       const { data: createdUsages, error: usageError } = await supabaseClient.from("blueprint_usage").insert(usagesToCreate).select(`
           *,
           cost_blueprints (
@@ -291,17 +266,11 @@ Deno.serve(async (req) => {
       if (txError) {
         console.error("Error fetching transactions:", txError);
       } else if (transactions && transactions.length > 0) {
-
         // VALIDATION: Check for over-allocation
-        for (const tx of transactions) {
-          const { data: existingAllocations } = await supabaseClient
-            .from("transaction_job_allocations")
-            .select("allocation_amount")
-            .eq("transaction_id", tx.id);
-
-          const totalAllocated = existingAllocations?.reduce((sum: number, a: any) => sum + Math.abs(Number(a.allocation_amount) || 0), 0) || 0;
+        for (const tx of transactions){
+          const { data: existingAllocations } = await supabaseClient.from("transaction_job_allocations").select("allocation_amount").eq("transaction_id", tx.id);
+          const totalAllocated = existingAllocations?.reduce((sum, a)=>sum + Math.abs(Number(a.allocation_amount) || 0), 0) || 0;
           const txAmount = Math.abs(parseFloat(tx.amount));
-
           if (totalAllocated + txAmount > txAmount + 0.01) {
             return new Response(JSON.stringify({
               error: `Transaction "${tx.name || tx.id}" is already partially or fully allocated to other jobs. Cannot link 100% to this invoice.`,
@@ -320,8 +289,7 @@ Deno.serve(async (req) => {
             });
           }
         }
-
-        const allocationsToCreate = transactions.map((tx) => {
+        const allocationsToCreate = transactions.map((tx)=>{
           const amt = Math.abs(Number(tx.amount) || 0);
           return {
             user_id: user.id,
@@ -337,18 +305,16 @@ Deno.serve(async (req) => {
           console.error("Error creating allocations:", allocError);
         } else {
           linkedTransactionsCount = allocations?.length ?? 0;
-          transactionCosts = transactions.reduce((sum, tx) => {
+          transactionCosts = transactions.reduce((sum, tx)=>{
             return sum + Math.abs(Number(tx.amount) || 0);
           }, 0);
         }
       }
     }
-
     // Calculate total actual cost from blueprints, transactions, and cost line items
     // total_actual_cost = blueprint costs + transaction costs + cost line items (NOT revenue items)
     const totalActualCost = blueprintTotalCost + transactionCosts + lineItemCosts;
     // actual_profit is a GENERATED column - computed automatically as: amount - total_actual_cost
-
     // Determine cost data source for frontend display
     let costDataSource = null;
     if (transactionCosts > 0) {
@@ -358,13 +324,12 @@ Deno.serve(async (req) => {
     } else if (lineItemCosts > 0) {
       costDataSource = "user_verified"; // User entered line items
     }
-
     // Update invoice with cost totals if there are any costs to track
     if (totalActualCost > 0 || blueprintTotalCost > 0) {
       await supabaseClient.from("invoices").update({
         total_actual_cost: totalActualCost > 0 ? totalActualCost : null,
         // actual_profit is computed automatically by the database
-        cost_data_source: costDataSource,
+        cost_data_source: costDataSource
       }).eq("id", invoice.id);
     }
     const { data: completeInvoice } = await supabaseClient.from("invoices").select(`

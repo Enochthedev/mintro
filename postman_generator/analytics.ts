@@ -332,6 +332,134 @@ export function getAnalyticsSection() {
                     ]
                 },
                 "Track vendor price changes over time to identify cost increases."
+            ),
+            // ========== NEW QB PROFITABILITY ENDPOINTS ==========
+            createRequest("🔵 Get QuickBooks P&L (Pure)", "GET", "/functions/v1/get-quickbooks-profitability", null,
+                [
+                    { key: "start_date", value: "2026-01-01", disabled: false, description: "Start date (YYYY-MM-DD)" },
+                    { key: "end_date", value: "2026-12-31", disabled: false, description: "End date (YYYY-MM-DD)" }
+                ],
+                {
+                    success: true,
+                    source: "quickbooks_pnl",
+                    period: { start_date: "2026-01-01", end_date: "2026-12-31" },
+                    pnl: {
+                        total_income: 45000.00,
+                        total_cogs: 18000.00,
+                        gross_profit: 27000.00,
+                        total_expenses: 12000.00,
+                        net_operating_income: 15000.00,
+                        other_income: 500.00,
+                        other_expenses: 200.00,
+                        net_income: 15300.00
+                    },
+                    metrics: {
+                        gross_margin: 60.00,
+                        net_margin: 34.00,
+                        expense_ratio: 26.67
+                    },
+                    last_synced: "2026-01-22T10:30:00Z",
+                    note: "These are official QuickBooks P&L numbers. Run quickbooks-sync-pnl to refresh."
+                },
+                "📊 PURE QB P&L! Returns official QuickBooks Profit & Loss report numbers. This is what your accountant sees. Run quickbooks-sync-pnl first to get latest data."
+            ),
+            createRequest("🟢 Get Combined Profitability (RECOMMENDED)", "GET", "/functions/v1/get-combined-profitability", null,
+                [
+                    { key: "start_date", value: "2026-01-01", disabled: false, description: "Start date (YYYY-MM-DD)" },
+                    { key: "end_date", value: "2026-12-31", disabled: false, description: "End date (YYYY-MM-DD)" }
+                ],
+                {
+                    success: true,
+                    source: "combined",
+                    period: { start_date: "2026-01-01", end_date: "2026-12-31" },
+                    quickbooks_pnl: {
+                        total_income: 45000.00,
+                        total_cogs: 18000.00,
+                        gross_profit: 27000.00,
+                        total_expenses: 12000.00,
+                        net_income: 15300.00
+                    },
+                    mintro_only_invoices: {
+                        count: 5,
+                        total_revenue: 8500.00,
+                        total_cost: 4200.00,
+                        total_profit: 4300.00,
+                        invoices: [
+                            { id: "uuid", invoice_number: "MINTRO-001", client: "Local Client", amount: 2500.00, cost: 1200.00, profit: 1300.00 }
+                        ]
+                    },
+                    combined_totals: {
+                        total_revenue: 53500.00,
+                        total_cost: 34200.00,
+                        total_profit: 19600.00,
+                        gross_margin: 36.64
+                    },
+                    data_sources: {
+                        qb_pnl_synced: "2026-01-22T10:30:00Z",
+                        mintro_invoices_included: 5,
+                        note: "QB P&L is source of truth. Mintro-only invoices (no quickbooks_id) are added on top."
+                    }
+                },
+                "⭐ BEST FOR MOST USERS! Uses QB P&L as source of truth + adds Mintro-only invoices (those not synced to QB). Gives you complete picture without double-counting."
+            ),
+            createRequest("🟡 Get Merged Profitability (Comparison)", "GET", "/functions/v1/get-merged-profitability", null,
+                [
+                    { key: "start_date", value: "2026-01-01", disabled: false, description: "Start date (YYYY-MM-DD)" },
+                    { key: "end_date", value: "2026-12-31", disabled: false, description: "End date (YYYY-MM-DD)" }
+                ],
+                {
+                    success: true,
+                    source: "merged_comparison",
+                    period: { start_date: "2026-01-01", end_date: "2026-12-31" },
+                    quickbooks_official: {
+                        source: "QB P&L Report",
+                        total_income: 45000.00,
+                        total_cogs: 18000.00,
+                        gross_profit: 27000.00,
+                        total_expenses: 12000.00,
+                        net_income: 15300.00,
+                        gross_margin: 60.00
+                    },
+                    mintro_calculated: {
+                        source: "Item.PurchaseCost × Qty",
+                        total_revenue: 45000.00,
+                        total_cost: 22500.00,
+                        total_profit: 22500.00,
+                        profit_margin: 50.00,
+                        invoices_with_real_cost: 18,
+                        total_invoices: 25
+                    },
+                    comparison: {
+                        revenue_match: true,
+                        cost_difference: 4500.00,
+                        profit_difference: -7200.00,
+                        explanation: "QB COGS only includes items posted to COGS accounts. Mintro calculates from Item.PurchaseCost which may include items not yet in COGS."
+                    },
+                    recommendation: "Use QB P&L for official reporting. Use Mintro calculated for per-job profitability analysis."
+                },
+                "📊 SIDE-BY-SIDE COMPARISON! Shows both QB P&L numbers AND Mintro-calculated numbers. Useful for understanding why they differ and which to use when."
+            ),
+            createRequest("Sync QuickBooks P&L Report", "POST", "/functions/v1/quickbooks-sync-pnl", null,
+                [
+                    { key: "start_date", value: "2026-01-01", disabled: true, description: "Start date (optional, defaults to fiscal year)" },
+                    { key: "end_date", value: "2026-12-31", disabled: true, description: "End date (optional, defaults to today)" }
+                ],
+                {
+                    success: true,
+                    message: "P&L report synced successfully",
+                    period: { start_date: "2026-01-01", end_date: "2026-01-22" },
+                    pnl_summary: {
+                        total_income: 45000.00,
+                        total_cogs: 18000.00,
+                        gross_profit: 27000.00,
+                        total_expenses: 12000.00,
+                        net_operating_income: 15000.00,
+                        net_income: 15300.00
+                    },
+                    sections_synced: ["Income", "Cost of Goods Sold", "Expenses", "Other Income", "Other Expenses"],
+                    line_items_stored: 45
+                },
+                "🔄 SYNC QB P&L! Fetches the official Profit & Loss report from QuickBooks and stores it. Run this before using get-quickbooks-profitability or get-combined-profitability."
             )
         ]
     };

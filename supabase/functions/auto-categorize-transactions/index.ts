@@ -1,50 +1,40 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
+import { createClient } from "jsr:@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "POST, OPTIONS"
 };
-
-serve(async (req) => {
+serve(async (req)=>{
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, {
+      headers: corsHeaders
+    });
   }
-
   try {
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      {
-        global: {
-          headers: { Authorization: req.headers.get("Authorization")! },
-        },
+    const supabaseClient = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
+      global: {
+        headers: {
+          Authorization: req.headers.get("Authorization")
+        }
       }
-    );
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabaseClient.auth.getUser();
-
+    });
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({
+        error: "Unauthorized"
+      }), {
+        status: 401,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
     }
-
-    const body = await req.json().catch(() => ({}));
+    const body = await req.json().catch(()=>({}));
     const { transaction_ids, limit = 500 } = body;
-
     // Build query for uncategorized transactions
-    let query = supabaseClient
-      .from("transactions")
-      .select("id, transaction_id, name, merchant_name, amount, category")
-      .eq("user_id", user.id)
-      .is("category", null);
-
+    let query = supabaseClient.from("transactions").select("id, transaction_id, name, merchant_name, amount, category").eq("user_id", user.id).is("category", null);
     // If specific IDs provided, use them. Otherwise, fetch all uncategorized.
     if (transaction_ids && Array.isArray(transaction_ids) && transaction_ids.length > 0) {
       query = query.in("id", transaction_ids);
@@ -52,56 +42,49 @@ serve(async (req) => {
       // Fetch all uncategorized transactions up to limit
       query = query.limit(limit);
     }
-
     const { data: transactions, error: txError } = await query;
-
     if (txError) throw txError;
-
     if (!transactions || transactions.length === 0) {
-      return new Response(
-        JSON.stringify({ success: true, message: "No uncategorized transactions to process", categorized: 0 }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({
+        success: true,
+        message: "No uncategorized transactions to process",
+        categorized: 0
+      }), {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
     }
-
     // Get user's categorization rules
-    const { data: rules, error: rulesError } = await supabaseClient
-      .from("categorization_rules")
-      .select(`id, category_id, rule_type, match_value, min_amount, max_amount, priority, confidence_score, expense_categories!category_id (id, name)`)
-      .eq("user_id", user.id)
-      .eq("is_active", true)
-      .order("priority", { ascending: false });
-
+    const { data: rules, error: rulesError } = await supabaseClient.from("categorization_rules").select(`id, category_id, rule_type, match_value, min_amount, max_amount, priority, confidence_score, expense_categories!category_id (id, name)`).eq("user_id", user.id).eq("is_active", true).order("priority", {
+      ascending: false
+    });
     if (rulesError) console.error("Error fetching rules:", rulesError);
-
-    const categorizations: any[] = [];
-    const ruleUpdates: Map<string, number> = new Map();
-    const unmatchedTransactions: any[] = [];
-
+    const categorizations = [];
+    const ruleUpdates = new Map();
+    const unmatchedTransactions = [];
     // Process each transaction with rules first
-    for (const transaction of transactions) {
+    for (const transaction of transactions){
       let matchedRule = null;
       let matchedCategory = null;
-
       if (rules && rules.length > 0) {
-        for (const rule of rules) {
+        for (const rule of rules){
           let isMatch = false;
-          switch (rule.rule_type) {
+          switch(rule.rule_type){
             case "vendor_exact":
-              isMatch = transaction.merchant_name?.toLowerCase() === rule.match_value.toLowerCase() ||
-                transaction.name?.toLowerCase() === rule.match_value.toLowerCase();
+              isMatch = transaction.merchant_name?.toLowerCase() === rule.match_value.toLowerCase() || transaction.name?.toLowerCase() === rule.match_value.toLowerCase();
               break;
             case "vendor_contains":
-              isMatch = transaction.merchant_name?.toLowerCase().includes(rule.match_value.toLowerCase()) ||
-                transaction.name?.toLowerCase().includes(rule.match_value.toLowerCase());
+              isMatch = transaction.merchant_name?.toLowerCase().includes(rule.match_value.toLowerCase()) || transaction.name?.toLowerCase().includes(rule.match_value.toLowerCase());
               break;
             case "description_contains":
               isMatch = transaction.name?.toLowerCase().includes(rule.match_value.toLowerCase());
               break;
             case "amount_range":
               const amount = Math.abs(parseFloat(transaction.amount));
-              isMatch = (!rule.min_amount || amount >= parseFloat(rule.min_amount)) &&
-                (!rule.max_amount || amount <= parseFloat(rule.max_amount));
+              isMatch = (!rule.min_amount || amount >= parseFloat(rule.min_amount)) && (!rule.max_amount || amount <= parseFloat(rule.max_amount));
               break;
           }
           if (isMatch) {
@@ -111,7 +94,6 @@ serve(async (req) => {
           }
         }
       }
-
       if (matchedRule && matchedCategory) {
         categorizations.push({
           transaction_id: transaction.id,
@@ -119,7 +101,7 @@ serve(async (req) => {
           method: "rule",
           rule_id: matchedRule.id,
           confidence: matchedRule.confidence_score || 0.95,
-          is_user_override: false,
+          is_user_override: false
         });
         const currentCount = ruleUpdates.get(matchedRule.id) || 0;
         ruleUpdates.set(matchedRule.id, currentCount + 1);
@@ -127,46 +109,47 @@ serve(async (req) => {
         unmatchedTransactions.push(transaction);
       }
     }
-
     // BATCHED AI FALLBACK
     if (unmatchedTransactions.length > 0 && Deno.env.get("OPENAI_API_KEY")) {
-      const { data: categories } = await supabaseClient
-        .from("expense_categories")
-        .select("id, name, description")
-        .eq("user_id", user.id);
-
+      const { data: categories } = await supabaseClient.from("expense_categories").select("id, name, description").eq("user_id", user.id);
       if (categories && categories.length > 0) {
-        const categoryList = categories.map(c => `${c.name}: ${c.description || 'No description'}`).join("\n");
+        const categoryList = categories.map((c)=>`${c.name}: ${c.description || 'No description'}`).join("\n");
         const BATCH_SIZE = 10;
-
-        for (let i = 0; i < unmatchedTransactions.length; i += BATCH_SIZE) {
+        for(let i = 0; i < unmatchedTransactions.length; i += BATCH_SIZE){
           const batch = unmatchedTransactions.slice(i, i + BATCH_SIZE);
           try {
-            const transactionsText = batch.map((t, idx) => `${idx + 1}. "${t.name}" - $${Math.abs(t.amount)}`).join("\n");
+            const transactionsText = batch.map((t, idx)=>`${idx + 1}. "${t.name}" - $${Math.abs(t.amount)}`).join("\n");
             const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
               method: "POST",
-              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${Deno.env.get("OPENAI_API_KEY")}` },
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${Deno.env.get("OPENAI_API_KEY")}`
+              },
               body: JSON.stringify({
                 model: "gpt-4o-mini",
                 messages: [
-                  { role: "system", content: `You categorize business transactions. Available categories:\n${categoryList}\n\nRespond ONLY with a JSON array. Each item must have: index (1-based), category (exact name from list), confidence (0.0-1.0).` },
-                  { role: "user", content: `Categorize these transactions:\n${transactionsText}` }
+                  {
+                    role: "system",
+                    content: `You categorize business transactions. Available categories:\n${categoryList}\n\nRespond ONLY with a JSON array. Each item must have: index (1-based), category (exact name from list), confidence (0.0-1.0).`
+                  },
+                  {
+                    role: "user",
+                    content: `Categorize these transactions:\n${transactionsText}`
+                  }
                 ],
                 temperature: 0.3,
-                max_tokens: 1000,
-              }),
+                max_tokens: 1000
+              })
             });
-
             if (aiResponse.ok) {
               const aiData = await aiResponse.json();
               const content = aiData.choices[0].message.content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
               const aiResults = JSON.parse(content);
-
-              for (const result of aiResults) {
+              for (const result of aiResults){
                 const txIndex = result.index - 1;
                 if (txIndex >= 0 && txIndex < batch.length) {
                   const transaction = batch[txIndex];
-                  const matchedCategory = categories.find(c => c.name.toLowerCase() === result.category.toLowerCase());
+                  const matchedCategory = categories.find((c)=>c.name.toLowerCase() === result.category.toLowerCase());
                   if (matchedCategory && result.confidence >= 0.5) {
                     categorizations.push({
                       transaction_id: transaction.id,
@@ -174,7 +157,7 @@ serve(async (req) => {
                       method: "ai",
                       rule_id: null,
                       confidence: result.confidence,
-                      is_user_override: false,
+                      is_user_override: false
                     });
                   }
                 }
@@ -186,58 +169,67 @@ serve(async (req) => {
         }
       }
     }
-
     // Insert categorizations
     let categorizedCount = 0;
     if (categorizations.length > 0) {
       const { error: categorizationError } = await supabaseClient.from("transaction_categorizations").insert(categorizations);
       if (categorizationError) console.error("Categorization error:", categorizationError);
       else categorizedCount = categorizations.length;
-
       // Also update the legacy 'category' column on transactions table for backward compatibility
       // Get category names for the categorized transactions
-      const categoryIds = [...new Set(categorizations.map(c => c.category_id))];
-      const { data: categories } = await supabaseClient
-        .from("expense_categories")
-        .select("id, name")
-        .in("id", categoryIds);
-
-      const categoryNameMap = new Map(categories?.map(c => [c.id, c.name]) || []);
-
+      const categoryIds = [
+        ...new Set(categorizations.map((c)=>c.category_id))
+      ];
+      const { data: categories } = await supabaseClient.from("expense_categories").select("id, name").in("id", categoryIds);
+      const categoryNameMap = new Map(categories?.map((c)=>[
+          c.id,
+          c.name
+        ]) || []);
       // Update each transaction's category column
-      for (const cat of categorizations) {
+      for (const cat of categorizations){
         const categoryName = categoryNameMap.get(cat.category_id);
         if (categoryName) {
-          await supabaseClient
-            .from("transactions")
-            .update({ category: categoryName })
-            .eq("id", cat.transaction_id);
+          await supabaseClient.from("transactions").update({
+            category: categoryName
+          }).eq("id", cat.transaction_id);
         }
       }
-
       // Update rule usage counts
-      for (const [ruleId, count] of ruleUpdates.entries()) {
+      for (const [ruleId, count] of ruleUpdates.entries()){
         const { data: currentRule } = await supabaseClient.from("categorization_rules").select("times_applied").eq("id", ruleId).single();
-        await supabaseClient.from("categorization_rules").update({ times_applied: (currentRule?.times_applied || 0) + count, last_applied_at: new Date().toISOString() }).eq("id", ruleId);
+        await supabaseClient.from("categorization_rules").update({
+          times_applied: (currentRule?.times_applied || 0) + count,
+          last_applied_at: new Date().toISOString()
+        }).eq("id", ruleId);
       }
     }
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: `Successfully categorized ${categorizedCount} of ${transactions.length} transactions`,
-        categorized: categorizedCount,
-        skipped: transactions.length - categorizedCount,
-        breakdown: {
-          rule_matched: categorizations.filter(c => c.method === "rule").length,
-          ai_categorized: categorizations.filter(c => c.method === "ai").length,
-          needs_review: transactions.length - categorizedCount
-        }
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (error: any) {
+    return new Response(JSON.stringify({
+      success: true,
+      message: `Successfully categorized ${categorizedCount} of ${transactions.length} transactions`,
+      categorized: categorizedCount,
+      skipped: transactions.length - categorizedCount,
+      breakdown: {
+        rule_matched: categorizations.filter((c)=>c.method === "rule").length,
+        ai_categorized: categorizations.filter((c)=>c.method === "ai").length,
+        needs_review: transactions.length - categorizedCount
+      }
+    }), {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json"
+      }
+    });
+  } catch (error) {
     console.error("Error:", error);
-    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({
+      error: error.message
+    }), {
+      status: 500,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json"
+      }
+    });
   }
 });

@@ -1,54 +1,51 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
+import { createClient } from "jsr:@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, OPTIONS"
 };
-
-serve(async (req) => {
+serve(async (req)=>{
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, {
+      headers: corsHeaders
+    });
   }
-
   try {
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      {
-        global: {
-          headers: { Authorization: req.headers.get("Authorization")! },
-        },
+    const supabaseClient = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
+      global: {
+        headers: {
+          Authorization: req.headers.get("Authorization")
+        }
       }
-    );
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabaseClient.auth.getUser();
-
+    });
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({
+        error: "Unauthorized"
+      }), {
+        status: 401,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
     }
-
     const url = new URL(req.url);
     const invoice_id = url.searchParams.get("invoice_id");
-
     if (!invoice_id) {
-      return new Response(
-        JSON.stringify({ error: "invoice_id query parameter is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({
+        error: "invoice_id query parameter is required"
+      }), {
+        status: 400,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
     }
-
     // Get invoice with all related data
-    const { data: invoice, error: invoiceError } = await supabaseClient
-      .from("invoices")
-      .select(`
+    const { data: invoice, error: invoiceError } = await supabaseClient.from("invoices").select(`
         *,
         invoice_items (*),
         blueprint_usage (
@@ -108,146 +105,110 @@ serve(async (req) => {
           override_method,
           created_at
         )
-      `)
-      .eq("id", invoice_id)
-      .eq("user_id", user.id)
-      .single();
-
+      `).eq("id", invoice_id).eq("user_id", user.id).single();
     if (invoiceError || !invoice) {
-      return new Response(
-        JSON.stringify({ error: "Invoice not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({
+        error: "Invoice not found"
+      }), {
+        status: 404,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
     }
-
     // Calculate linked expenses total
-    const linkedExpensesTotal = invoice.transaction_job_allocations?.reduce(
-      (sum: number, alloc: any) => sum + parseFloat(alloc.allocation_amount || 0),
-      0
-    ) || 0;
-
+    const linkedExpensesTotal = invoice.transaction_job_allocations?.reduce((sum, alloc)=>sum + parseFloat(alloc.allocation_amount || 0), 0) || 0;
     // Calculate profit summary
     const profitSummary = {
       revenue: parseFloat(invoice.amount || 0),
       actual_cost: parseFloat(invoice.total_actual_cost || 0),
       actual_profit: parseFloat(invoice.actual_profit || 0),
-      profit_margin: invoice.amount > 0 && invoice.actual_profit
-        ? (parseFloat(invoice.actual_profit) / parseFloat(invoice.amount)) * 100
-        : null,
+      profit_margin: invoice.amount > 0 && invoice.actual_profit ? parseFloat(invoice.actual_profit) / parseFloat(invoice.amount) * 100 : null,
       has_cost_override: invoice.cost_override_by_user || false,
-      linked_expenses_total: linkedExpensesTotal,
+      linked_expenses_total: linkedExpensesTotal
     };
-
     // Get blueprint variance if any
     let blueprintComparison = null;
     if (invoice.blueprint_usage && invoice.blueprint_usage.length > 0) {
-      const totalEstimatedCost = invoice.blueprint_usage.reduce(
-        (sum: number, usage: any) => sum + parseFloat(usage.cost_blueprints?.total_estimated_cost || 0),
-        0
-      );
-      const totalActualCost = invoice.blueprint_usage.reduce(
-        (sum: number, usage: any) => sum + parseFloat(usage.total_actual_cost || 0),
-        0
-      );
-
+      const totalEstimatedCost = invoice.blueprint_usage.reduce((sum, usage)=>sum + parseFloat(usage.cost_blueprints?.total_estimated_cost || 0), 0);
+      const totalActualCost = invoice.blueprint_usage.reduce((sum, usage)=>sum + parseFloat(usage.total_actual_cost || 0), 0);
       blueprintComparison = {
         total_estimated_cost: totalEstimatedCost,
         total_actual_cost: totalActualCost,
         variance: totalActualCost - totalEstimatedCost,
-        variance_percentage: totalEstimatedCost > 0
-          ? ((totalActualCost - totalEstimatedCost) / totalEstimatedCost) * 100
-          : 0,
+        variance_percentage: totalEstimatedCost > 0 ? (totalActualCost - totalEstimatedCost) / totalEstimatedCost * 100 : 0
       };
     }
-
     // Calculate comprehensive cost breakdown
     // Separate line items by category (revenue vs costs)
-    const revenueItems = invoice.invoice_items?.filter((item: any) =>
-      item.category && item.category.toLowerCase() === 'revenue'
-    ) || [];
-
-    const costItems = invoice.invoice_items?.filter((item: any) =>
-      !item.category || item.category.toLowerCase() !== 'revenue'
-    ) || [];
-
-    const lineItemRevenueTotal = revenueItems.reduce(
-      (sum: number, item: any) => sum + (item.qty * parseFloat(item.unit_price || 0)),
-      0
-    );
-
-    const lineItemCostsTotal = costItems.reduce(
-      (sum: number, item: any) => sum + (item.qty * parseFloat(item.unit_price || 0)),
-      0
-    );
-
+    const revenueItems = invoice.invoice_items?.filter((item)=>item.category && item.category.toLowerCase() === 'revenue') || [];
+    const costItems = invoice.invoice_items?.filter((item)=>!item.category || item.category.toLowerCase() !== 'revenue') || [];
+    const lineItemRevenueTotal = revenueItems.reduce((sum, item)=>sum + item.qty * parseFloat(item.unit_price || 0), 0);
+    const lineItemCostsTotal = costItems.reduce((sum, item)=>sum + item.qty * parseFloat(item.unit_price || 0), 0);
     const costBreakdown = {
       blueprints: {
-        items: invoice.blueprint_usage?.map((usage: any) => ({
-          name: usage.cost_blueprints?.name || 'Unknown Blueprint',
-          blueprint_type: usage.cost_blueprints?.blueprint_type,
-          sale_price: parseFloat(usage.actual_sale_price || 0),
-          estimated_cost: parseFloat(usage.cost_blueprints?.total_estimated_cost || 0),
-          actual_cost: parseFloat(usage.total_actual_cost || 0),
-          profit: parseFloat(usage.actual_profit || 0),
-        })) || [],
-        total_sale_price: invoice.blueprint_usage?.reduce(
-          (sum: number, usage: any) => sum + parseFloat(usage.actual_sale_price || 0),
-          0
-        ) || 0,
-        total_cost: invoice.blueprint_usage?.reduce(
-          (sum: number, usage: any) => sum + parseFloat(usage.total_actual_cost || 0),
-          0
-        ) || 0,
-        total_profit: invoice.blueprint_usage?.reduce(
-          (sum: number, usage: any) => sum + parseFloat(usage.actual_profit || 0),
-          0
-        ) || 0,
+        items: invoice.blueprint_usage?.map((usage)=>({
+            name: usage.cost_blueprints?.name || 'Unknown Blueprint',
+            blueprint_type: usage.cost_blueprints?.blueprint_type,
+            sale_price: parseFloat(usage.actual_sale_price || 0),
+            estimated_cost: parseFloat(usage.cost_blueprints?.total_estimated_cost || 0),
+            actual_cost: parseFloat(usage.total_actual_cost || 0),
+            profit: parseFloat(usage.actual_profit || 0)
+          })) || [],
+        total_sale_price: invoice.blueprint_usage?.reduce((sum, usage)=>sum + parseFloat(usage.actual_sale_price || 0), 0) || 0,
+        total_cost: invoice.blueprint_usage?.reduce((sum, usage)=>sum + parseFloat(usage.total_actual_cost || 0), 0) || 0,
+        total_profit: invoice.blueprint_usage?.reduce((sum, usage)=>sum + parseFloat(usage.actual_profit || 0), 0) || 0
       },
       line_items: {
-        revenue_items: revenueItems.map((item: any) => ({
-          description: item.description,
-          category: item.category,
-          qty: item.qty,
-          unit_price: parseFloat(item.unit_price || 0),
-          total: item.qty * parseFloat(item.unit_price || 0),
-        })),
-        expense_items: costItems.map((item: any) => ({
-          description: item.description,
-          category: item.category,
-          qty: item.qty,
-          unit_price: parseFloat(item.unit_price || 0),
-          total: item.qty * parseFloat(item.unit_price || 0),
-        })),
+        revenue_items: revenueItems.map((item)=>({
+            description: item.description,
+            category: item.category,
+            qty: item.qty,
+            unit_price: parseFloat(item.unit_price || 0),
+            total: item.qty * parseFloat(item.unit_price || 0)
+          })),
+        expense_items: costItems.map((item)=>({
+            description: item.description,
+            category: item.category,
+            qty: item.qty,
+            unit_price: parseFloat(item.unit_price || 0),
+            total: item.qty * parseFloat(item.unit_price || 0)
+          })),
         revenue_total: lineItemRevenueTotal,
         expense_total: lineItemCostsTotal,
-        total_amount: lineItemRevenueTotal + lineItemCostsTotal, // All items add to invoice amount
-        total_cost_contribution: lineItemCostsTotal, // Only expenses add to actual cost
+        total_amount: lineItemRevenueTotal + lineItemCostsTotal,
+        total_cost_contribution: lineItemCostsTotal
       },
       grand_total: parseFloat(invoice.amount || 0),
       total_actual_cost: parseFloat(invoice.total_actual_cost || 0),
-      actual_profit: parseFloat(invoice.actual_profit || 0),
+      actual_profit: parseFloat(invoice.actual_profit || 0)
     };
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        invoice: {
-          ...invoice,
-          profit_summary: profitSummary,
-          blueprint_comparison: blueprintComparison,
-          cost_breakdown: costBreakdown,
-        },
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return new Response(JSON.stringify({
+      success: true,
+      invoice: {
+        ...invoice,
+        profit_summary: profitSummary,
+        blueprint_comparison: blueprintComparison,
+        cost_breakdown: costBreakdown
       }
-    );
-  } catch (error: any) {
+    }), {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json"
+      }
+    });
+  } catch (error) {
     console.error("Error:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({
+      error: error.message
+    }), {
+      status: 500,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json"
+      }
+    });
   }
 });

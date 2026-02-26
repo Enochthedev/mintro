@@ -1,387 +1,325 @@
-# Profitability Engine - Frontend Integration Guide
+# Profitability Endpoints - Frontend Guide
 
-**Last Updated**: January 9, 2026  
-**Status**: ✅ All endpoints deployed and ready
+## Quick Reference: Which Endpoint to Use?
 
----
-
-## Overview
-
-The profitability engine has been refactored to **always calculate profit** using available data. You no longer need blueprints or manual cost entries to see profit calculations.
-
-### Key Changes
-
-| Before | After |
-|--------|-------|
-| Required blueprints to show profit | Works for ALL invoices |
-| Empty results if no cost data | Shows revenue with $0 cost (100% margin) |
-| No visibility into data gaps | Clear `data_quality` messages |
+| Use Case | Endpoint | When to Use |
+|----------|----------|-------------|
+| **Official Numbers** | `get-quickbooks-profitability` | Displaying "official" P&L to users, reports |
+| **Complete Picture** | `get-combined-profitability` | Dashboard, main profitability view (RECOMMENDED) |
+| **Debugging/Comparison** | `get-merged-profitability` | Admin view, understanding discrepancies |
+| **Per-Job Analysis** | `get-accurate-profitability` | Invoice list with profit per job |
+| **Sync QB Data** | `quickbooks-sync-pnl` | Before displaying QB numbers, refresh button |
 
 ---
 
-## Quick Start
+## 1. 🔵 Get QuickBooks P&L (Pure)
 
-### 1. Import Updated Postman Collection
+**Endpoint:** `GET /functions/v1/get-quickbooks-profitability`
 
-1. Open Postman
-2. Click **Import** → Select `mintro_postman_collection.json`
-3. Look for the **📊 Analytics & Profitability** folder
-4. Set your `ACCESS_TOKEN` variable
+**What it returns:** Official QuickBooks Profit & Loss report numbers - exactly what the accountant sees.
 
-### 2. Test the Endpoints
-
-Start with these two to see overall profitability:
-
-```
-GET /functions/v1/get-business-profitability?start_date=2025-01-01&end_date=2025-12-31
-GET /functions/v1/get-estimated-vs-actual-summary?start_date=2025-01-01&end_date=2025-12-31
-```
-
----
-
-## Endpoints Reference
-
-### 1. Get Business Profitability
-
-**The main profitability dashboard endpoint.**
-
-```
-GET /functions/v1/get-business-profitability
-```
-
-**Query Parameters:**
-| Param | Type | Required | Description |
-|-------|------|----------|-------------|
-| `start_date` | string | No | Start date (YYYY-MM-DD), defaults to Jan 1 of current year |
-| `end_date` | string | No | End date (YYYY-MM-DD), defaults to today |
-
-**Response:**
-```json
+```typescript
+// Response structure
 {
-  "success": true,
-  "period": { "start_date": "2025-01-01", "end_date": "2025-12-31" },
-  "overview": {
-    "total_revenue": 150000.00,
-    "total_expenses": 90000.00,
-    "net_profit": 60000.00,
-    "profit_margin": 40.00
+  success: true,
+  source: "quickbooks_pnl",
+  period: { start_date: "2026-01-01", end_date: "2026-12-31" },
+  pnl: {
+    total_income: 45000.00,      // All revenue from QB
+    total_cogs: 18000.00,        // Cost of Goods Sold
+    gross_profit: 27000.00,      // income - cogs
+    total_expenses: 12000.00,    // Operating expenses
+    net_operating_income: 15000.00,
+    other_income: 500.00,
+    other_expenses: 200.00,
+    net_income: 15300.00         // Bottom line profit
   },
-  "job_metrics": {
-    "total_invoices": 45,
-    "invoices_with_cost_data": 40,
-    "invoices_with_transaction_costs": 35,
-    "invoices_with_blueprint_estimates": 20,
-    "total_job_costs": 78000.00,
-    "total_job_profit": 47000.00,
-    "average_job_profit": 1175.00,
-    "average_job_margin": 37.60
+  metrics: {
+    gross_margin: 60.00,         // (gross_profit / income) * 100
+    net_margin: 34.00,           // (net_income / income) * 100
+    expense_ratio: 26.67         // (expenses / income) * 100
   },
-  "service_type_breakdown": [
-    { "service_type": "Kitchen Remodel", "revenue": 50000, "cost": 32000, "profit": 18000, "profit_margin": 36.00 }
-  ],
-  "month_over_month": {
-    "current_month_revenue": 15000.00,
-    "last_month_revenue": 13500.00,
-    "revenue_change_percent": 11.11,
-    "trend": "up"
+  last_synced: "2026-01-22T10:30:00Z"
+}
+```
+
+**Frontend Usage:**
+- Display on "Official Reports" page
+- Show `last_synced` so users know data freshness
+- Add "Refresh" button that calls `quickbooks-sync-pnl`
+
+---
+
+## 2. 🟢 Get Combined Profitability (RECOMMENDED)
+
+**Endpoint:** `GET /functions/v1/get-combined-profitability`
+
+**What it returns:** QB P&L as source of truth + Mintro-only invoices added on top. No double-counting.
+
+```typescript
+// Response structure
+{
+  success: true,
+  source: "combined",
+  period: { start_date: "2026-01-01", end_date: "2026-12-31" },
+  
+  // Official QB numbers
+  quickbooks_pnl: {
+    total_income: 45000.00,
+    total_cogs: 18000.00,
+    gross_profit: 27000.00,
+    total_expenses: 12000.00,
+    net_income: 15300.00
   },
-  "data_quality": {
-    "message": "40 of 45 invoices have cost data.",
-    "invoices_missing_cost_data": 5
+  
+  // Invoices created in Mintro but NOT synced to QB
+  mintro_only_invoices: {
+    count: 5,
+    total_revenue: 8500.00,
+    total_cost: 4200.00,
+    total_profit: 4300.00,
+    invoices: [
+      { id: "uuid", invoice_number: "MINTRO-001", client: "Local Client", amount: 2500.00, cost: 1200.00, profit: 1300.00 }
+    ]
+  },
+  
+  // The combined totals (what to display)
+  combined_totals: {
+    total_revenue: 53500.00,    // QB income + Mintro-only revenue
+    total_cost: 34200.00,       // QB cogs+expenses + Mintro-only costs
+    total_profit: 19600.00,     // Combined profit
+    gross_margin: 36.64
+  },
+  
+  data_sources: {
+    qb_pnl_synced: "2026-01-22T10:30:00Z",
+    mintro_invoices_included: 5,
+    note: "QB P&L is source of truth. Mintro-only invoices added on top."
   }
 }
 ```
 
 **Frontend Usage:**
-- `overview` → Dashboard KPIs cards
-- `job_metrics` → Job performance section
-- `service_type_breakdown` → Pie/bar chart by service
-- `month_over_month` → Trend indicator with arrow up/down
-- `data_quality.message` → Show as info banner if `invoices_missing_cost_data > 0`
+- Main dashboard profitability widget
+- Show `combined_totals` as the primary numbers
+- Optionally show breakdown: "QB: $45k + Mintro: $8.5k = $53.5k"
 
 ---
 
-### 2. Get Estimated vs Actual Summary (NEW)
+## 3. 🟡 Get Merged Profitability (Comparison)
 
-**Compare blueprint estimates to actual costs across all jobs.**
+**Endpoint:** `GET /functions/v1/get-merged-profitability`
 
-```
-GET /functions/v1/get-estimated-vs-actual-summary
-```
+**What it returns:** Side-by-side comparison of QB official vs Mintro calculated numbers.
 
-**Query Parameters:**
-| Param | Type | Required | Description |
-|-------|------|----------|-------------|
-| `start_date` | string | No | Start date (YYYY-MM-DD) |
-| `end_date` | string | No | End date (YYYY-MM-DD) |
-
-**Response:**
-```json
+```typescript
+// Response structure
 {
-  "success": true,
-  "period": { "start_date": "2025-01-01", "end_date": "2025-12-31" },
-  "summary": {
-    "total_invoices": 45,
-    "total_revenue": 150000.00,
-    "total_estimated_cost": 80000.00,
-    "total_actual_cost": 82000.00,
-    "net_cost_variance": 2000.00,
-    "avg_variance_percent": 2.50,
-    "jobs_with_estimates": 20,
-    "jobs_under_budget": 12,
-    "jobs_over_budget": 5,
-    "jobs_on_budget": 3
+  success: true,
+  source: "merged_comparison",
+  period: { start_date: "2026-01-01", end_date: "2026-12-31" },
+  
+  // Official QB P&L
+  quickbooks_official: {
+    source: "QB P&L Report",
+    total_income: 45000.00,
+    total_cogs: 18000.00,
+    gross_profit: 27000.00,
+    total_expenses: 12000.00,
+    net_income: 15300.00,
+    gross_margin: 60.00
   },
-  "performance_status": "over_budget",
-  "message": "Tracking 2000.00 over budget across 20 estimated jobs."
+  
+  // Mintro's calculation from Item.PurchaseCost
+  mintro_calculated: {
+    source: "Item.PurchaseCost × Qty",
+    total_revenue: 45000.00,
+    total_cost: 22500.00,
+    total_profit: 22500.00,
+    profit_margin: 50.00,
+    invoices_with_real_cost: 18,
+    total_invoices: 25
+  },
+  
+  // Why they differ
+  comparison: {
+    revenue_match: true,
+    cost_difference: 4500.00,
+    profit_difference: -7200.00,
+    explanation: "QB COGS only includes items posted to COGS accounts. Mintro calculates from Item.PurchaseCost which may include items not yet in COGS."
+  },
+  
+  recommendation: "Use QB P&L for official reporting. Use Mintro calculated for per-job profitability analysis."
 }
 ```
 
 **Frontend Usage:**
-- `summary.net_cost_variance` → Main variance display (negative = good, positive = bad)
-- `performance_status` → Color indicator (green for "under_budget", red for "over_budget")
-- `jobs_under_budget` / `jobs_over_budget` → Pie chart or stats
-- `message` → Summary text display
-
-**Note:** This only includes jobs that have blueprint estimates attached. Jobs without blueprints are not included in variance calculation.
+- Admin/debug view
+- Help users understand why numbers differ
+- Show comparison table with both columns
 
 ---
 
-### 3. Get Invoice Profit Breakdown
+## 4. ⭐ Get Accurate Profitability (Per-Job)
 
-**Detailed breakdown for a single invoice.**
+**Endpoint:** `GET /functions/v1/get-accurate-profitability`
 
-```
-GET /functions/v1/get-invoice-profit-breakdown?invoice_id={uuid}
-```
+**What it returns:** Per-invoice profitability using Item.PurchaseCost × Quantity.
 
-**Response:**
-```json
+```typescript
+// Response structure
 {
-  "success": true,
-  "invoice": { "id": "uuid", "invoice_number": "INV-001", "client": "ABC Corp", "amount": 5000.00 },
-  "blueprints": [{ "id": "bp-1", "name": "Kitchen Standard", "type": "service" }],
-  "costs": {
-    "from_transactions": { "total": 3200.00, "transaction_count": 5 },
-    "estimated": { "materials": 1500, "labor": 1200, "overhead": 300, "total": 3000.00 },
-    "actual": { "materials": 1600, "labor": 1300, "overhead": 300, "total": 3200.00 },
-    "effective": { "amount": 3200.00, "source": "linked_transactions" },
-    "variance": { "materials": 100, "labor": 100, "overhead": 0, "total": 200.00 }
+  success: true,
+  period: { start_date: "2026-01-01", end_date: "2026-12-31" },
+  
+  summary: {
+    total_revenue: 45000.00,
+    total_cost: 22500.00,
+    total_profit: 22500.00,
+    profit_margin: 50.00,
+    invoice_count: 25
   },
-  "profit": {
-    "calculated": 1800.00,
-    "estimated": 2000.00,
-    "variance": -200.00,
-    "margin": 36.00
+  
+  data_quality: {
+    level: "good",
+    message: "18 of 25 invoices have real cost data from QuickBooks.",
+    real_cost_percentage: 72.0,
+    by_cost_source: { qb_item_cost: 18, estimated: 5, none: 2 }
   },
-  "linked_expenses": [
-    { "id": "exp-1", "amount": 1600.00, "date": "2025-11-10", "vendor": "Home Depot", "category": "Materials" }
-  ],
-  "data_sources": {
-    "has_linked_transactions": true,
-    "has_blueprints": true,
-    "has_manual_override": false,
-    "cost_source": "linked_transactions"
-  },
-  "data_quality": { "message": "Costs calculated from linked transactions." }
-}
-```
-
-**Frontend Usage:**
-- `costs.effective` → The cost actually used for profit calculation
-- `costs.effective.source` → Show badge: "From Transactions" / "From Blueprint" / "Manual Override"
-- `costs.variance` → Show variance per category (red if positive, green if negative)
-- `linked_expenses` → Table of linked bank transactions
-- `profit.margin` → Display as percentage
-
----
-
-### 4. Get Profit Trends
-
-**Historical profit over time.**
-
-```
-GET /functions/v1/get-profit-trends?period=monthly&months=12
-```
-
-**Query Parameters:**
-| Param | Type | Required | Description |
-|-------|------|----------|-------------|
-| `period` | string | No | `monthly`, `quarterly`, or `yearly` |
-| `months` | number | No | Number of months to analyze (default: 12) |
-
-**Response:**
-```json
-{
-  "success": true,
-  "period_type": "monthly",
-  "months_analyzed": 12,
-  "trends": [
+  
+  // Individual invoice breakdown
+  invoices: [
     {
-      "period": "2025-01",
-      "revenue": 15000.00,
-      "expenses": 9000.00,
-      "job_costs": 8500.00,
-      "job_profit": 6500.00,
-      "net_profit": 6000.00,
-      "job_profit_margin": 43.33,
-      "invoice_count": 5,
-      "invoices_with_cost_data": 4
+      invoice_id: "uuid",
+      invoice_number: "INV-0001",
+      client: "Cool Cars",
+      financials: { revenue: 2194, cost: 1239.37, profit: 954.63, margin: 43.51 },
+      data_quality: { cost_source: "qb_item_cost", quality_level: "excellent", is_real_cost: true }
     }
-  ],
-  "growth_rates": [
-    { "period": "2025-02", "revenue_growth": 8.5, "job_profit_growth": 12.0 }
-  ],
-  "summary": {
-    "total_revenue": 150000.00,
-    "total_job_profit": 65000.00,
-    "trend_direction": "growing",
-    "total_invoices": 45,
-    "invoices_with_cost_data": 40
-  },
-  "data_quality": {
-    "message": "40 of 45 invoices have cost data for accurate trend analysis.",
-    "cost_data_coverage": 88.89
-  }
-}
-```
-
-**Frontend Usage:**
-- `trends` → Line chart with revenue/profit over time
-- `growth_rates` → Show growth % badges
-- `summary.trend_direction` → Show "📈 Growing" / "📉 Declining" / "➡️ Stable"
-
----
-
-### 5. Get Margin Analysis
-
-**Analyze margins by service type, blueprint, find low/high margin jobs.**
-
-```
-GET /functions/v1/get-margin-analysis?start_date=2025-01-01&end_date=2025-12-31&min_margin=20
-```
-
-**Response includes:**
-- `by_service_type` → Margin breakdown per service type
-- `by_blueprint_type` → Margin breakdown per blueprint type
-- `low_margin_jobs` → List of jobs below threshold (for alerts)
-- `high_margin_jobs` → Best performing jobs
-- `summary` → Aggregate stats
-
-**Frontend Usage:**
-- Build a table/chart showing which service types are most profitable
-- Highlight low-margin jobs in red
-- Use for "Profitability by Service" report
-
----
-
-### 6. Get Margin Alerts
-
-**Proactive alerts for margin issues.**
-
-```
-GET /functions/v1/get-margin-alerts?margin_threshold=20&cost_spike_threshold=25&days_back=30
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "summary": {
-    "total_alerts": 5,
-    "low_margin_jobs_count": 2,
-    "negative_jobs_count": 1,
-    "cost_spikes_count": 2,
-    "total_revenue_lost": 1500.00
-  },
-  "alerts": {
-    "low_margin_jobs": [{ "invoice_id": "...", "margin": 15.5 }],
-    "negative_profit_jobs": [{ "invoice_id": "...", "loss": 500 }],
-    "cost_spikes": [{ "invoice_id": "...", "variance_percent": 30.0 }],
-    "missing_cost_data": [{ "invoice_id": "...", "message": "No cost data" }]
-  },
-  "recommendations": [
-    "⚠️ You have jobs losing money. Review pricing strategy immediately."
   ]
 }
 ```
 
 **Frontend Usage:**
-- `summary.total_alerts` → Badge count on dashboard
-- `alerts.*` → Expandable alert lists
-- `recommendations` → Show as action items
-- `missing_cost_data` → Prompt user to link transactions
+- Invoice list with profit column
+- Job profitability analysis
+- Show `data_quality.cost_source` badge per invoice
 
 ---
 
-## How Cost Calculation Works
+## 5. 🔄 Sync QuickBooks P&L
 
-The engine uses this priority to determine costs:
+**Endpoint:** `POST /functions/v1/quickbooks-sync-pnl`
 
-```
-1. Manual Override    → If user manually set costs, use those
-       ↓
-2. Linked Transactions → Sum of bank transactions linked to invoice
-       ↓
-3. Stored Actual Cost  → If total_actual_cost exists in DB
-       ↓
-4. Zero               → No cost data, profit = revenue (100% margin)
-```
+**What it does:** Fetches latest P&L report from QuickBooks and stores it.
 
-Every response includes `data_sources` showing what was used:
-
-```json
-"data_sources": {
-  "has_linked_transactions": true,
-  "has_blueprints": true,
-  "has_manual_override": false,
-  "cost_source": "linked_transactions"
+```typescript
+// Response structure
+{
+  success: true,
+  message: "P&L report synced successfully",
+  period: { start_date: "2026-01-01", end_date: "2026-01-22" },
+  pnl_summary: {
+    total_income: 45000.00,
+    total_cogs: 18000.00,
+    gross_profit: 27000.00,
+    total_expenses: 12000.00,
+    net_income: 15300.00
+  }
 }
 ```
 
----
-
-## UI Recommendations
-
-### Show Data Quality
-
-When `invoices_missing_cost_data > 0`, show an info banner:
-
-```
-ℹ️ 5 invoices don't have cost data. Link bank transactions for accurate profit tracking.
-[Link Transactions →]
-```
-
-### Indicate Cost Source
-
-Show a small badge or tooltip indicating where costs came from:
-
-| Source | Badge |
-|--------|-------|
-| `linked_transactions` | 🏦 From Transactions |
-| `blueprint_estimate` | 📐 Estimated |
-| `manual_override` | ✏️ Manual Entry |
-| `none` | ⚠️ No Cost Data |
-
-### Handle Empty States
-
-If no invoices exist yet:
-```
-No profitability data yet. Create invoices and link bank transactions to start tracking profit.
-```
+**Frontend Usage:**
+- "Refresh" button on profitability pages
+- Call before displaying QB numbers if `last_synced` is old
+- Show loading state during sync
 
 ---
 
-## Testing Flow
+## Data Flow Diagram
 
-1. **Create an invoice** via `create-invoice`
-2. **Connect bank** via Plaid flow
-3. **Link transactions** to invoice via `link-transaction-to-job` or during invoice creation
-4. **View profit** via `get-business-profitability` or `get-invoice-profit-breakdown`
-5. **Compare to estimates** via `get-estimated-vs-actual-summary` (if using blueprints)
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        QuickBooks                                │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │   Invoices   │  │    Items     │  │   P&L Report │          │
+│  │  (Revenue)   │  │ (PurchaseCost)│  │  (Official)  │          │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘          │
+└─────────┼─────────────────┼─────────────────┼──────────────────┘
+          │                 │                 │
+          ▼                 ▼                 ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                         Mintro                                   │
+│                                                                  │
+│  quickbooks-full-sync          quickbooks-sync-pnl              │
+│         │                              │                         │
+│         ▼                              ▼                         │
+│  ┌──────────────┐              ┌──────────────┐                 │
+│  │   invoices   │              │  qb_pnl_data │                 │
+│  │ (with costs) │              │  (official)  │                 │
+│  └──────┬───────┘              └──────┬───────┘                 │
+│         │                              │                         │
+│         ▼                              ▼                         │
+│  get-accurate-profitability    get-quickbooks-profitability     │
+│  (per-job analysis)            (official numbers)               │
+│                                        │                         │
+│                    ┌───────────────────┴───────────────────┐    │
+│                    ▼                                       ▼    │
+│           get-combined-profitability          get-merged-profitability
+│           (QB + Mintro-only)                  (side-by-side)    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Recommended Frontend Implementation
+
+### Dashboard Widget
+```typescript
+// Use get-combined-profitability for main dashboard
+const { combined_totals, data_sources } = await fetch('/functions/v1/get-combined-profitability?start_date=2026-01-01&end_date=2026-12-31');
+
+// Display
+<Card>
+  <h3>Profitability</h3>
+  <Stat label="Revenue" value={combined_totals.total_revenue} />
+  <Stat label="Costs" value={combined_totals.total_cost} />
+  <Stat label="Profit" value={combined_totals.total_profit} />
+  <Stat label="Margin" value={`${combined_totals.gross_margin}%`} />
+  <small>Last synced: {data_sources.qb_pnl_synced}</small>
+</Card>
+```
+
+### Invoice List with Profit
+```typescript
+// Use get-accurate-profitability for invoice list
+const { invoices, data_quality } = await fetch('/functions/v1/get-accurate-profitability?start_date=2026-01-01&end_date=2026-12-31');
+
+// Display
+<Table>
+  {invoices.map(inv => (
+    <Row>
+      <Cell>{inv.invoice_number}</Cell>
+      <Cell>{inv.client}</Cell>
+      <Cell>${inv.financials.revenue}</Cell>
+      <Cell>${inv.financials.cost}</Cell>
+      <Cell>${inv.financials.profit}</Cell>
+      <Cell>{inv.financials.margin}%</Cell>
+      <Badge variant={inv.data_quality.is_real_cost ? 'success' : 'warning'}>
+        {inv.data_quality.cost_source}
+      </Badge>
+    </Row>
+  ))}
+</Table>
+```
 
 ---
 
 ## Questions?
 
-Check the Postman collection `mintro_postman_collection.json` for full request/response examples including error cases.
+The key insight is:
+- **QB P&L** = What your accountant sees (official)
+- **Mintro calculated** = Per-job profitability using Item.PurchaseCost
+- **Combined** = Best of both worlds (QB official + Mintro-only invoices)
+
+Use `get-combined-profitability` for most use cases!
